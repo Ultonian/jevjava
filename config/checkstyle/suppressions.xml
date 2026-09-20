@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+    "-//Checkstyle//DTD SuppressionFilter Configuration 1.2//EN"
+    "https://checkstyle.org/dtds/suppressions_1_2.dtd">
+<suppressions>
+  <!-- Tests may skip Javadoc and may hold long fixture literals; everything else applies. -->
+  <suppress checks="(MissingJavadocMethod|MissingJavadocType|SummaryJavadoc)" files="[\\/]src[\\/]test[\\/]"/>
+  <suppress checks="(LineLength|VariableDeclarationUsageDistance)" files="[\\/]src[\\/]test[\\/]"/>
+</suppressions>

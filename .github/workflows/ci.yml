@@ -1,0 +1,60 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build and verify (JDK ${{ matrix.java }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        java: ["21", "25"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ matrix.java }}
+          cache: maven
+      - name: Verify (compile -Werror, Checkstyle, tests, JaCoCo, SpotBugs)
+        run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Upload JaCoCo report
+        if: matrix.java == '21'
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: "**/target/site/jacoco/"
+          if-no-files-found: ignore
+
+  pre-commit:
+    name: pre-commit hooks (non-Maven)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+      - run: pipx install pre-commit
+      - run: SKIP=maven-verify pre-commit run --all-files
+
+  trivy:
+    name: Trivy (dependencies and config)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan repository
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,misconfig,secret
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true

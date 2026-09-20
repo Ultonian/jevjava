@@ -1,0 +1,28 @@
+# Pre-commit quality gate. Activate once per clone with:  pre-commit install --install-hooks
+# The Maven step is the same gate CI runs (compile with -Werror, Checkstyle, tests, JaCoCo >=85%, SpotBugs).
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^docs/upstream/.*\.json$
+      - id: end-of-file-fixer
+        exclude: ^docs/upstream/.*\.json$
+      - id: check-yaml
+      - id: check-xml
+      - id: check-json
+      - id: check-added-large-files
+        args: ["--maxkb=512"]
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: ["--fix=lf"]
+        exclude: ^mvnw\.cmd$
+  - repo: local
+    hooks:
+      - id: maven-verify
+        name: mvn verify (spotless, checkstyle, tests, jacoco, javadoc, spotbugs)
+        entry: ./mvnw --batch-mode --quiet --no-transfer-progress verify
+        language: system
+        pass_filenames: false
+        # Unconditional: fixtures, schema copies and hook config all feed the tests.
+        always_run: true

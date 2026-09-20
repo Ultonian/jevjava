@@ -1,0 +1,15 @@
+target/
+.mvn/wrapper/maven-wrapper.jar
+*.class
+*.log
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+.DS_Store
+
+# Local working documents (plan, review notes): not part of the published repository
+JEV_JAVA_SDK_PLAN*.md
+docs/PHASE_*_REVIEW*.md

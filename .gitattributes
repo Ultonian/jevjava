@@ -1,0 +1,2 @@
+mvnw.cmd text eol=crlf
+docs/upstream/*.json -text

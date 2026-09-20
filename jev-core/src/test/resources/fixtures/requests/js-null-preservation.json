@@ -1,0 +1,10 @@
+{
+  "model": "jev-latest",
+  "state": null,
+  "questions": {
+    "noul": { "type": "noul", "instructions": null, "criteria": { "true": null, "false": null } },
+    "noCriteria": { "type": "noul", "instructions": null, "criteria": null },
+    "choice": { "type": "choice", "instructions": null, "criteria": { "yes": null, "no": null } },
+    "score": { "type": "score", "instructions": null, "criteria": [null, "high"] }
+  }
+}
