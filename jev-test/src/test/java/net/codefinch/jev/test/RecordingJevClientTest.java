@@ -380,35 +380,64 @@ class RecordingJevClientTest {
     assertThat(queued.isCancelled()).isTrue();
   }
 
+  /**
+   * R3 finding 3 / R4 follow-up: publication is held deterministically by occupying the scheduler's
+   * only carrier (the module's surefire argLine pins parallelism and maxPoolSize to 1), so the
+   * closer must park; interrupting it there throws and reasserts the flag, and publication still
+   * completes once the carrier is released.
+   */
   @Test
   void closeInterruptedWhilePublicationIsHeldThrowsAndReasserts() throws Exception {
-    // Hold publication by never releasing the responder executor's captured task and by making
-    // the future's publication itself impossible to observe... simplest: a future we complete late.
+    org.junit.jupiter.api.Assumptions.assumeTrue(
+        "1".equals(System.getProperty("jdk.virtualThreadScheduler.maxPoolSize")),
+        "needs the single-carrier scheduler from the module's surefire configuration");
     CapturingExecutor executor = new CapturingExecutor();
     RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);
-    c.modelsAsync();
-    AtomicBoolean interruptedFlag = new AtomicBoolean();
-    AtomicBoolean threw = new AtomicBoolean();
-    Thread closer =
-        new Thread(
-            () -> {
-              try {
-                c.close();
-              } catch (net.codefinch.jev.JevException e) {
-                threw.set(e.getMessage().contains("interrupted"));
-                interruptedFlag.set(Thread.currentThread().isInterrupted());
-              }
-            },
-            "closer");
-    closer.start();
-    closer.join(
-        2000); // normally publication is immediate; if close already returned, that's fine too
-    if (closer.isAlive()) {
+    CompletableFuture<ModelList> queued = c.modelsAsync();
+    AtomicBoolean release = new AtomicBoolean();
+    Thread carrierHog =
+        Thread.ofVirtual()
+            .name("carrier-hog")
+            .start(
+                () -> {
+                  while (!release.get()) {
+                    Thread.onSpinWait(); // never unmounts: the sole carrier stays occupied
+                  }
+                });
+    try {
+      AtomicBoolean interruptedFlag = new AtomicBoolean();
+      AtomicBoolean threw = new AtomicBoolean();
+      Thread closer =
+          new Thread(
+              () -> {
+                try {
+                  c.close();
+                } catch (net.codefinch.jev.JevException e) {
+                  threw.set(e.getMessage().contains("interrupted"));
+                  interruptedFlag.set(Thread.currentThread().isInterrupted());
+                }
+              },
+              "closer");
+      closer.start();
+      long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+      while (closer.getState() != Thread.State.TIMED_WAITING && System.nanoTime() < end) {
+        Thread.sleep(2);
+      }
+      assertThat(closer.getState())
+          .as("closer parked awaiting publication")
+          .isEqualTo(Thread.State.TIMED_WAITING);
+      assertThat(queued.isDone()).as("publication cannot run while the carrier is held").isFalse();
       closer.interrupt();
-      closer.join(2000);
+      closer.join(TimeUnit.SECONDS.toMillis(3));
+      assertThat(closer.isAlive()).isFalse();
       assertThat(threw.get()).isTrue();
       assertThat(interruptedFlag.get()).isTrue();
+    } finally {
+      release.set(true);
+      carrierHog.join(TimeUnit.SECONDS.toMillis(3));
     }
+    c.close(); // publication runs now; a second close observes it promptly
+    assertThat(queued.isCancelled()).isTrue();
   }
 
   /** Phase 3 review P2: lastCall() must read one snapshot even while reset() races it. */

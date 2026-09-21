@@ -7,6 +7,14 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Fixed (Phase 3 review, fourth pass)
+- A failure while building the HTTP request (for example an invalid header name from
+  `RequestOptions`) now settles the attempt's reserved observer slot, so the call's terminal
+  `ERROR` event is delivered instead of being stuck behind it; the attempt event carries the
+  failure and no status.
+- The fake's interrupted-close test holds the scheduler's only carrier so publication is
+  deterministically pending when the closer is interrupted.
+
 ### Fixed (Phase 3 review, third pass)
 - The client's log level now filters every SDK message for that client, including the parser's
   unknown-answer warning and observer-exception warnings, through a per-client `Diagnostics`

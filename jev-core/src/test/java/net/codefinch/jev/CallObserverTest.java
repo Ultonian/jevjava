@@ -459,6 +459,49 @@ class CallObserverTest {
     c.close();
   }
 
+  /**
+   * R4 finding: a failure while building the request (before any exchange) must still settle the
+   * attempt's reserved slot, or the terminal ERROR event is stuck behind it forever.
+   */
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"sync", "async"})
+  void requestConstructionFailureIsObservedAsAnErrorCall(String mode) throws Exception {
+    RequestOptions invalid = RequestOptions.builder().header("bad header", "value").build();
+    try (JevClient c = client().build()) {
+      if (mode.equals("sync")) {
+        assertThatThrownBy(() -> c.models(invalid))
+            .isInstanceOf(JevException.class)
+            .hasMessageContaining("invalid request header");
+      } else {
+        CompletableFuture<ModelList> f = c.modelsAsync(invalid);
+        assertThatThrownBy(() -> f.get(5, TimeUnit.SECONDS))
+            .hasCauseInstanceOf(JevException.class)
+            .cause()
+            .hasMessageContaining("invalid request header");
+      }
+      awaitEvents(1);
+      assertThat(server.requests()).isEmpty();
+      assertThat(recording.calls).hasSize(1);
+      CallObserver.Call call = recording.calls.get(0);
+      assertThat(call.outcome()).isEqualTo(CallObserver.Outcome.ERROR);
+      assertThat(call.attempts()).isEqualTo(1);
+      assertThat(call.status()).isEmpty();
+      assertThat(call.failure()).get().isInstanceOf(JevException.class);
+      assertThat(recording.attempts).hasSize(1);
+      CallObserver.Attempt attempt = recording.attempts.get(0);
+      assertThat(attempt.attempt()).isEqualTo(1);
+      assertThat(attempt.status()).isEmpty();
+      assertThat(attempt.failure()).get().isInstanceOf(JevException.class);
+
+      // Positive control: the client is not wedged, a valid call still observes normally.
+      server.enqueueJson(200, Fixtures.read("responses/models.json"));
+      c.models();
+      awaitEvents(2);
+      assertThat(recording.calls).hasSize(2);
+      assertThat(recording.calls.get(1).outcome()).isEqualTo(CallObserver.Outcome.SUCCESS);
+    }
+  }
+
   private void awaitEvents(int calls) {
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
     while (recording.calls.size() < calls && System.nanoTime() < end) {

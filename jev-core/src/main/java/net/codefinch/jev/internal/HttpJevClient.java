@@ -774,13 +774,17 @@ public final class HttpJevClient implements JevClient {
       }
     }
 
+    /**
+     * One attempt, owning the slot {@link #startAttempt} reserved: every exit fills it, including a
+     * failure while building the request (no exchange happened, so the event has no status), so a
+     * later terminal event is never stuck behind an empty slot.
+     */
     private T attempt(int attempt, Duration budget, CompletableFuture<Runnable> slot) {
-      HttpRequest request = buildRequest(attempt, budget);
       final long started = config.nanoTime().getAsLong();
       int status = -1;
       Throwable failure = null;
       try {
-        HttpResponse<String> response = exchange(request, budget);
+        HttpResponse<String> response = exchange(buildRequest(attempt, budget), budget);
         status = response.statusCode();
         lastStatus = status;
         return handle(response, started);
