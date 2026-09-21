@@ -14,6 +14,10 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
   failure and no status.
 - The fake's interrupted-close test holds the scheduler's only carrier so publication is
   deterministically pending when the closer is interrupted.
+- Two lifecycle tests no longer assume an ordering the client does not promise (events of
+  different calls relative to each other; a closer thread's exit relative to its completed
+  shutdown), which failed on slow CI runners. `HttpJevClient.isShutdownComplete()` exposes the
+  state the second check needs.
 
 ### Fixed (Phase 3 review, third pass)
 - The client's log level now filters every SDK message for that client, including the parser's

@@ -1513,7 +1513,9 @@ class HttpJevClientTest {
                 .closeGracePeriod(Duration.ofMillis(600))
                 .build();
     CompletableFuture<ModelList> queued = c.modelsAsync();
-    AtomicReference<Boolean> firstDoneWhenSecondReturned = new AtomicReference<>();
+    // The guarantee is that the second close returns only after the first closer's shutdown has
+    // completed; the first thread itself may still be unwinding, so its liveness is not the check.
+    AtomicReference<Boolean> shutdownDoneWhenSecondReturned = new AtomicReference<>();
     AtomicReference<Boolean> resultDoneWhenSecondReturned = new AtomicReference<>();
     Thread first = new Thread(c::close, "first-closer");
     first.start();
@@ -1527,7 +1529,7 @@ class HttpJevClientTest {
         new Thread(
             () -> {
               c.close();
-              firstDoneWhenSecondReturned.set(!first.isAlive());
+              shutdownDoneWhenSecondReturned.set(c.isShutdownComplete());
               resultDoneWhenSecondReturned.set(queued.isDone());
             },
             "second-closer");
@@ -1540,7 +1542,9 @@ class HttpJevClientTest {
     assertThat(resultDoneWhenSecondReturned.get())
         .as("result done when the second close returned")
         .isTrue();
-    assertThat(firstDoneWhenSecondReturned.get()).as("first closer finished first").isTrue();
+    assertThat(shutdownDoneWhenSecondReturned.get())
+        .as("first closer's shutdown complete when the second close returned")
+        .isTrue();
     assertThat(queued.isCancelled()).isTrue();
     occupied.countDown();
     single.shutdownNow();

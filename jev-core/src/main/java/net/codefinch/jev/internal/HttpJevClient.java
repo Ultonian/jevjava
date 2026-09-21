@@ -142,6 +142,13 @@ public final class HttpJevClient implements JevClient {
     }
   }
 
+  /** True once the first closer's shutdown has completed, whether or not it succeeded. */
+  public boolean isShutdownComplete() {
+    synchronized (lifecycle) {
+      return phase == Phase.CLOSED;
+    }
+  }
+
   @Override
   public SystemOneResponse systemOne(SystemOneRequest request, RequestOptions options) {
     Objects.requireNonNull(request, "request");

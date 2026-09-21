@@ -156,6 +156,7 @@ class CallObserverTest {
       CompletableFuture<ModelList> expired = c.modelsAsync();
       assertThatThrownBy(() -> expired.get(2, TimeUnit.SECONDS))
           .hasCauseInstanceOf(JevDeadlineExceededException.class);
+      awaitEvents(1); // events of different calls are unordered relative to each other
       CompletableFuture<ModelList> cancelled =
           c.modelsAsync(RequestOptions.builder().noDeadline().build());
       cancelled.cancel(true);
