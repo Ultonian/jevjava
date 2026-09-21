@@ -40,7 +40,11 @@ public final class EntityAlignment {
   /** Two alcohol percentages this close count as equal (arithmetic, not a question). */
   static final double ABV_TOLERANCE = 0.05;
 
-  /** Automatic outcomes need a confident score; anything less goes to a curator. */
+  /**
+   * Only a confident score (ACT, at or above 0.7) produces an automatic outcome. CONFIRM routes to
+   * the curator with the suggested outcome attached; ESCALATE routes there with no suggestion. The
+   * cookbook itself has no gate; this one is the example's own policy.
+   */
   static final ConfidenceGate LINK = ConfidenceGate.of(0.5, 0.7);
 
   private EntityAlignment() {}
@@ -61,7 +65,9 @@ public final class EntityAlignment {
     ScoreAnswer link = answers.score("link_state");
     String decision =
         switch (LINK.decide(link)) {
-          case ACT, CONFIRM -> outcome((int) Math.round(link.score()));
+          case ACT -> outcome((int) Math.round(link.score()));
+          case CONFIRM ->
+              "curator queue (confirm: " + outcome((int) Math.round(link.score())) + ")";
           case ESCALATE -> "curator queue (uncertain)";
         };
     String evidence =

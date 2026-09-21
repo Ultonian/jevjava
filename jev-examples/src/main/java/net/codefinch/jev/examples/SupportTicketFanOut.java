@@ -50,7 +50,10 @@ public final class SupportTicketFanOut {
               List.of("Calm, matter-of-fact", "Frustrated but civil", "Very angry"))
           .build();
 
-  /** Route on the category only when the model is reasonably sure; otherwise a person triages. */
+  /**
+   * Route automatically only at ACT (0.8+). CONFIRM (0.5–0.8) still computes the handler but an
+   * agent confirms the category first; below 0.5 a person triages from scratch.
+   */
   static final ConfidenceGate CATEGORY = ConfidenceGate.of(0.5, 0.8);
 
   static final NoulThreshold REPRODUCIBLE = NoulThreshold.at(0.5);
@@ -69,31 +72,35 @@ public final class SupportTicketFanOut {
     String handler =
         switch (CATEGORY.decide(a.choice("category"))) {
           case ESCALATE -> "manual triage (category unclear)";
-          case CONFIRM, ACT ->
-              switch (category) {
-                case "bug_report" -> {
-                  double severity = a.score("bug_severity").score();
-                  String repro =
-                      REPRODUCIBLE.decide(a.noul("has_reproducible_steps"))
-                              == NoulThreshold.Decision.YES
-                          ? "with repro steps"
-                          : "needs repro steps";
-                  yield severity >= 1.5
-                      ? "engineering on-call (blocking, " + repro + ")"
-                      : "bug backlog (" + repro + ")";
-                }
-                case "billing" ->
-                    switch (REFUND.decide(a.noul("refund_requested"))) {
-                      case YES -> "billing: refund workflow";
-                      case NO -> "billing: general";
-                      case UNSURE -> "billing: agent checks for a refund request";
-                    };
-                case "feature_request" -> "product backlog";
-                default -> "account support";
-              };
+          case CONFIRM -> "agent confirms category, then: " + handlerFor(category, a);
+          case ACT -> handlerFor(category, a);
         };
     boolean frustrated = a.score("frustration").score() >= FRUSTRATION_FLAG;
     return new Routing(category, handler, frustrated);
+  }
+
+  /** The handler once the category is settled; reads only the answers that category needs. */
+  static String handlerFor(String category, Answers a) {
+    return switch (category) {
+      case "bug_report" -> {
+        double severity = a.score("bug_severity").score();
+        String repro =
+            REPRODUCIBLE.decide(a.noul("has_reproducible_steps")) == NoulThreshold.Decision.YES
+                ? "with repro steps"
+                : "needs repro steps";
+        yield severity >= 1.5
+            ? "engineering on-call (blocking, " + repro + ")"
+            : "bug backlog (" + repro + ")";
+      }
+      case "billing" ->
+          switch (REFUND.decide(a.noul("refund_requested"))) {
+            case YES -> "billing: refund workflow";
+            case NO -> "billing: general";
+            case UNSURE -> "billing: agent checks for a refund request";
+          };
+      case "feature_request" -> "product backlog";
+      default -> "account support";
+    };
   }
 
   static final List<String> SAMPLE_TICKETS =

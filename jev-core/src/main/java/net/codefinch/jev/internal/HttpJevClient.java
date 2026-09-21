@@ -96,6 +96,7 @@ public final class HttpJevClient implements JevClient {
           "x-typesafe-retry-count");
 
   private final ClientConfig config;
+  private final Diagnostics diagnostics;
 
   private final Set<Call<?>> inFlight = ConcurrentHashMap.newKeySet();
   private final ScheduledThreadPoolExecutor scheduler;
@@ -112,6 +113,7 @@ public final class HttpJevClient implements JevClient {
   /** Creates the client; use {@code JevClient.builder()}. */
   public HttpJevClient(ClientConfig config) {
     this.config = Objects.requireNonNull(config, "config");
+    this.diagnostics = Diagnostics.of(LOG, config.logLevel());
     this.scheduler =
         new ScheduledThreadPoolExecutor(
             1,
@@ -374,7 +376,12 @@ public final class HttpJevClient implements JevClient {
     URI uri = URI.create(config.baseUrl() + SYSTEM_ONE_PATH);
     String body = RequestWriter.write(request, config.defaultModel());
     return new Spec<>(
-        "systemone", "POST", uri, "POST " + uri, Optional.of(body), ResponseParser::parseSystemOne);
+        "systemone",
+        "POST",
+        uri,
+        "POST " + uri,
+        Optional.of(body),
+        (st, h, b, e) -> ResponseParser.parseSystemOne(st, h, b, e, diagnostics));
   }
 
   private Spec<ModelList> modelsSpec(RequestOptions options) {
@@ -546,8 +553,11 @@ public final class HttpJevClient implements JevClient {
      * outcome is published, so {@link #close()} can still see it in the hand-off gap.
      */
     boolean finish() {
-      if (!finished.compareAndSet(false, true)) {
-        return false;
+      synchronized (
+          this) { // atomic with startAttempt(): termination and attempt start never interleave
+        if (!finished.compareAndSet(false, true)) {
+          return false;
+        }
       }
       ScheduledFuture<?> t = timer;
       if (t != null) {
@@ -662,7 +672,7 @@ public final class HttpJevClient implements JevClient {
               try {
                 observer.onCall(event);
               } catch (RuntimeException e) {
-                LOG.log(Level.WARNING, "CallObserver.onCall threw; ignoring", e);
+                diagnostics.log(Level.WARNING, () -> "CallObserver.onCall threw; ignoring", e);
               }
             }
           });
@@ -690,7 +700,7 @@ public final class HttpJevClient implements JevClient {
               try {
                 observer.onAttempt(event);
               } catch (RuntimeException e) {
-                LOG.log(Level.WARNING, "CallObserver.onAttempt threw; ignoring", e);
+                diagnostics.log(Level.WARNING, () -> "CallObserver.onAttempt threw; ignoring", e);
               }
             }
           });
@@ -707,9 +717,9 @@ public final class HttpJevClient implements JevClient {
           }
           budget = min(budget, Duration.ofNanos(remaining));
         }
-        attempts = attempt + 1;
+        final CompletableFuture<Runnable> slot = startAttempt(attempt);
         try {
-          return attempt(attempt, budget);
+          return attempt(attempt, budget, slot);
         } catch (JevException e) {
           last = e;
           checkCancelled();
@@ -749,11 +759,24 @@ public final class HttpJevClient implements JevClient {
       }
     }
 
-    private T attempt(int attempt, Duration budget) {
+    /**
+     * Decides, atomically with any terminal transition, that this attempt starts: if the call has
+     * already finished the attempt never starts; otherwise its observer slot is reserved before any
+     * terminal event can be enqueued, so attempts always precede the call event.
+     */
+    private CompletableFuture<Runnable> startAttempt(int attempt) {
+      synchronized (this) {
+        if (finished.get() || handle.isCancelled()) {
+          throw cancelled(null);
+        }
+        attempts = attempt + 1;
+        return config.observers().isEmpty() ? null : reserveObserverSlot();
+      }
+    }
+
+    private T attempt(int attempt, Duration budget, CompletableFuture<Runnable> slot) {
       HttpRequest request = buildRequest(attempt, budget);
       final long started = config.nanoTime().getAsLong();
-      final CompletableFuture<Runnable> slot =
-          config.observers().isEmpty() ? null : reserveObserverSlot();
       int status = -1;
       Throwable failure = null;
       try {
@@ -939,13 +962,9 @@ public final class HttpJevClient implements JevClient {
   // Helpers
   // ---------------------------------------------------------------------------------------------
 
-  /** Logs only when the client's configured level admits it and the backend would record it. */
+  /** Logs through this client's diagnostic sink (its configured level applies). */
   private void log(Level level, Supplier<String> message) {
-    if (config.logLevel() != Level.OFF
-        && level.getSeverity() >= config.logLevel().getSeverity()
-        && LOG.isLoggable(level)) {
-      LOG.log(level, message);
-    }
+    diagnostics.log(level, message);
   }
 
   private static Optional<String> firstHeader(Map<String, List<String>> headers, String name) {

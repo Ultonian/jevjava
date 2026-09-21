@@ -1766,6 +1766,181 @@ class HttpJevClientTest {
     }
   }
 
+  // ---------------------------------------------------------------------------------------------
+  // Phase 3 review R3: per-client log filtering covers the parser and observer paths
+  // ---------------------------------------------------------------------------------------------
+
+  /** Captures every record on the SDK's logger namespace, whichever class emitted it. */
+  private static final class SdkLogCapture implements AutoCloseable {
+    final List<java.util.logging.LogRecord> records =
+        new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final java.util.logging.Logger jul =
+        java.util.logging.Logger.getLogger("net.codefinch.jev");
+    private final java.util.logging.Level previous = jul.getLevel();
+    private final java.util.logging.Handler handler =
+        new java.util.logging.Handler() {
+          @Override
+          public void publish(java.util.logging.LogRecord r) {
+            records.add(r);
+          }
+
+          @Override
+          public void flush() {}
+
+          @Override
+          public void close() {}
+        };
+
+    SdkLogCapture() {
+      jul.setLevel(java.util.logging.Level.ALL);
+      jul.addHandler(handler);
+    }
+
+    String messages() {
+      return records.stream()
+          .map(java.util.logging.LogRecord::getMessage)
+          .reduce("", (a, b) -> a + "\n" + b);
+    }
+
+    @Override
+    public void close() {
+      jul.removeHandler(handler);
+      jul.setLevel(previous);
+    }
+  }
+
+  @ParameterizedTest(name = "{0}")
+  @CsvSource({"OFF, false", "ERROR, false", "WARNING, true"})
+  void unknownAnswerAndObserverWarningsHonourEachClientsLevel(String level, boolean expected)
+      throws Exception {
+    CallObserver throwing =
+        new CallObserver() {
+          @Override
+          public void onCall(Call call) {
+            throw new IllegalStateException("observer boom");
+          }
+        };
+    CountDownLatch observed = new CountDownLatch(1);
+    CallObserver sentinel =
+        new CallObserver() {
+          @Override
+          public void onCall(Call call) {
+            observed.countDown();
+          }
+        };
+    try (SdkLogCapture capture = new SdkLogCapture()) {
+      server.enqueueJson(200, Fixtures.read("responses/python-unknown-answer-type.json"));
+      try (JevClient c =
+          client()
+              .logLevel(System.Logger.Level.valueOf(level))
+              .observer(throwing)
+              .observer(sentinel)
+              .build()) {
+        c.systemOne(REQUEST);
+      }
+      assertThat(observed.await(3, TimeUnit.SECONDS)).isTrue();
+      Thread.sleep(50); // the throwing observer's warning is logged on the delivery thread
+      String all = capture.messages();
+      if (expected) {
+        assertThat(all)
+            .as("rendered text carries the real id and type, not {0}/{1}")
+            .contains("Ignoring answer 'mystery' with unrecognized type 'aurora'")
+            .contains("CallObserver.onCall threw; ignoring");
+        assertThat(capture.records).anyMatch(r -> r.getThrown() instanceof IllegalStateException);
+      } else {
+        assertThat(capture.records)
+            .as(level + " logs nothing, parser and observer paths included")
+            .isEmpty();
+      }
+    }
+  }
+
+  @Test
+  void twoClientsWithDifferentLevelsFilterIndependently() throws Exception {
+    try (SdkLogCapture capture = new SdkLogCapture()) {
+      server.enqueueJson(200, Fixtures.read("responses/python-unknown-answer-type.json"));
+      server.enqueueJson(200, Fixtures.read("responses/python-unknown-answer-type.json"));
+      try (JevClient quiet = client().logLevel(System.Logger.Level.OFF).build();
+          JevClient loud = client().logLevel(System.Logger.Level.INFO).build()) {
+        quiet.systemOne(REQUEST);
+        assertThat(capture.records).isEmpty();
+        loud.systemOne(REQUEST);
+      }
+      assertThat(capture.messages()).contains("unrecognized type 'aurora'", "-> 200 in");
+      assertThat(capture.records).hasSizeGreaterThanOrEqualTo(2);
+    }
+  }
+
+  // ---------------------------------------------------------------------------------------------
+  // Phase 3 review R3: attempt start is atomic with termination
+  // ---------------------------------------------------------------------------------------------
+
+  /**
+   * Holds the worker at its very first clock read (the attempt-start timestamp, or the deadline
+   * check just before it) while a terminal path fires. Either the attempt never starts, or its
+   * event precedes the terminal one; the terminal event never comes first.
+   */
+  @ParameterizedTest(name = "{0}")
+  @CsvSource({"cancel", "close", "deadline"})
+  void terminalEventNeverPrecedesAnAttemptThatStarted(String path) throws Exception {
+    server.enqueueJson(200, OK);
+    Thread testThread = Thread.currentThread();
+    CountDownLatch workerHeld = new CountDownLatch(1);
+    CountDownLatch release = new CountDownLatch(1);
+    AtomicReference<Boolean> armed = new AtomicReference<>(false);
+    java.util.function.LongSupplier holdingClock =
+        () -> {
+          Thread t = Thread.currentThread();
+          if (t != testThread
+              && !t.getName().equals("jev-deadline")
+              && armed.compareAndSet(true, false)) {
+            workerHeld.countDown();
+            try {
+              release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+              t.interrupt();
+            }
+          }
+          return System.nanoTime();
+        };
+    List<String> order = new java.util.concurrent.CopyOnWriteArrayList<>();
+    CountDownLatch terminal = new CountDownLatch(1);
+    CallObserver ordering =
+        new CallObserver() {
+          @Override
+          public void onAttempt(Attempt attempt) {
+            order.add("attempt" + attempt.attempt());
+          }
+
+          @Override
+          public void onCall(Call call) {
+            order.add("call:" + call.outcome());
+            terminal.countDown();
+          }
+        };
+    JevClientBuilder b =
+        client().nanoTime(holdingClock).observer(ordering).closeGracePeriod(Duration.ZERO);
+    JevClient c =
+        (path.equals("deadline") ? b.deadline(Duration.ofMillis(200)) : b.noDeadline()).build();
+    armed.set(true);
+    CompletableFuture<SystemOneResponse> f = c.systemOneAsync(REQUEST);
+    assertThat(workerHeld.await(3, TimeUnit.SECONDS))
+        .as("worker held at its first clock read")
+        .isTrue();
+    switch (path) {
+      case "cancel" -> f.cancel(true);
+      case "close" -> c.close();
+      default -> Thread.sleep(300); // let the deadline expire while the worker is held
+    }
+    assertThat(f.isDone()).as("the public result is terminal while the worker is held").isTrue();
+    release.countDown();
+    assertThat(terminal.await(5, TimeUnit.SECONDS)).isTrue();
+    Thread.sleep(100); // any late attempt event would arrive now
+    String expected = path.equals("deadline") ? "call:DEADLINE" : "call:CANCELLED";
+    assertThat(order).as(path).isIn(List.of(expected), List.of("attempt1", expected));
+    c.close();
+  }
+
   private void awaitRequests(int n) throws InterruptedException {
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
     while (server.requests().size() < n && System.nanoTime() < end) {

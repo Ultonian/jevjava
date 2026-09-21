@@ -14,6 +14,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.codefinch.jev.JevClient;
@@ -226,7 +227,13 @@ public final class RecordingJevClient implements JevClient {
           throw new JevException(
               "close(): a result was still unpublished after " + PUBLICATION_WAIT);
         }
-        Thread.onSpinWait();
+        // Park rather than spin: a spinning virtual thread would keep its carrier and could starve
+        // the very publication threads it is waiting for.
+        LockSupport.parkNanos(1_000_000L);
+        if (Thread.interrupted()) {
+          Thread.currentThread().interrupt();
+          throw new JevException("close(): interrupted while waiting for publication");
+        }
       }
     }
   }

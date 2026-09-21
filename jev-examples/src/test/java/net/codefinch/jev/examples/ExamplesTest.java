@@ -31,7 +31,9 @@ class ExamplesTest {
   void supportTicketFanOutReadsOnlyTheRelevantSpeculativeAnswers() {
     RecordingJevClient fake = SupportTicketFanOut.scripted();
     String out = run(fake, SupportTicketFanOut::run);
-    assertThat(out).contains("billing", "refund workflow", "[frustrated]");
+    assertThat(out)
+        .contains(
+            "billing", "agent confirms category, then: billing: refund workflow", "[frustrated]");
     assertThat(out).contains("bug_report", "engineering on-call (blocking, with repro steps)");
     assertThat(out).contains("feature_request", "product backlog");
     assertThat(fake.requests()).hasSize(3);
@@ -124,6 +126,33 @@ class ExamplesTest {
         request.questions().asMap().get("item_1").instructions().orElseThrow().toJson();
     assertThat(instructions.get("item").textValue()).isEqualTo(Rerank.SAMPLE_SHORTLIST.get(1));
     assertThat(instructions.get("task").textValue()).isEqualTo(Rerank.TASK);
+  }
+
+  /** R3 finding 4: CONFIRM never produces an automatic outcome, at both gate boundaries. */
+  @Test
+  void entityAlignmentRespectsTheConfirmBand() {
+    net.codefinch.jev.ScoreQuestion link =
+        (net.codefinch.jev.ScoreQuestion) EntityAlignment.QUESTIONS.asMap().get("link_state");
+    double[][] cases = {{0.49, 0}, {0.5, 1}, {0.699, 1}, {0.7, 2}};
+    String[] expected = {
+      "curator queue (uncertain)",
+      "curator queue (confirm: assert sameAs)",
+      "curator queue (confirm: assert sameAs)",
+      "assert sameAs"
+    };
+    for (int i = 0; i < cases.length; i++) {
+      double confidence = cases[i][0];
+      try (RecordingJevClient fake = new RecordingJevClient()) {
+        fake.respondWith(
+            req ->
+                net.codefinch.jev.test.ScriptedAnswers.neutral(req.questions())
+                    .score("link_state", link, 1.9, confidence)
+                    .build());
+        assertThat(EntityAlignment.align(fake, EntityAlignment.SAMPLE_PAIRS.get(0)).decision())
+            .as("confidence " + confidence)
+            .isEqualTo(expected[i]);
+      }
+    }
   }
 
   @Test

@@ -7,6 +7,19 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Fixed (Phase 3 review, third pass)
+- The client's log level now filters every SDK message for that client, including the parser's
+  unknown-answer warning and observer-exception warnings, through a per-client `Diagnostics`
+  sink; the warning text renders the real answer id and type.
+- Attempt start is atomic with termination: an attempt either never starts after cancellation,
+  deadline expiry or `close()`, or its observer event precedes the terminal event.
+- `RecordingJevClient.close()` parks instead of spinning while awaiting publication, so a closing
+  virtual thread cannot starve its own publication threads; the module's tests run on a
+  single-carrier scheduler to prove it.
+- `EntityAlignment` routes CONFIRM to the curator (with the suggested outcome) and
+  `SupportTicketFanOut` asks an agent to confirm the category; only ACT is automatic.
+- The README cancellation sample's test holds the executor before cancelling.
+
 ### Changed
 - Log levels now match the official SDKs: attempt summaries, retries, transport failures and
   aborts at INFO; headers and bodies at DEBUG; dropped answer kinds at WARNING. The default gate

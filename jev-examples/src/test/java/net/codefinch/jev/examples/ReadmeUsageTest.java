@@ -141,9 +141,17 @@ class ReadmeUsageTest {
       CompletableFuture<SystemOneResponse> future = client.systemOneAsync(state, questions);
       CompletableFuture<Void> routed = future.thenAccept(r -> route(r.answers()));
       routed.get(2, TimeUnit.SECONDS);
-      CompletableFuture<SystemOneResponse> another = client.systemOneAsync(state, questions);
-      another.cancel(true);
-      assertThat(another.isCancelled()).isTrue();
+    }
+    // Cancellation, asserted deterministically: the responder executor is held so the call cannot
+    // complete before cancel() is called.
+    List<Runnable> held = new java.util.ArrayList<>();
+    try (RecordingJevClient client =
+        new RecordingJevClient(java.time.Clock.systemUTC(), held::add)) {
+      CompletableFuture<SystemOneResponse> future = client.systemOneAsync(state, questions);
+      future.cancel(true);
+      assertThat(future.isCancelled()).isTrue();
+      held.forEach(Runnable::run);
+      assertThat(future.isCancelled()).as("a late result is discarded").isTrue();
     }
   }
 

@@ -38,12 +38,25 @@ import net.codefinch.jev.Usage;
 public final class ResponseParser {
   private static final Logger LOG = System.getLogger(ResponseParser.class.getName());
 
+  /** Used by callers without a client (tests, fakes): warnings only, via this class's logger. */
+  static final Diagnostics DEFAULT = Diagnostics.of(LOG, Level.WARNING);
+
   private ResponseParser() {}
 
-  /** Parses a {@code POST /v1/systemone} success body. */
+  /** Parses a {@code POST /v1/systemone} success body, logging through the default sink. */
   public static SystemOneResponse parseSystemOne(
       int status, Map<String, List<String>> headers, String body, String endpoint) {
-    Context ctx = new Context(status, headers, body, endpoint);
+    return parseSystemOne(status, headers, body, endpoint, DEFAULT);
+  }
+
+  /** Parses a {@code POST /v1/systemone} success body, logging through the given sink. */
+  public static SystemOneResponse parseSystemOne(
+      int status,
+      Map<String, List<String>> headers,
+      String body,
+      String endpoint,
+      Diagnostics diagnostics) {
+    Context ctx = new Context(status, headers, body, endpoint, diagnostics);
     JsonNode root = ctx.root();
     String model = ctx.text(root, "model", "model");
     JsonNode answersNode = ctx.object(root, "answers", "answers");
@@ -72,7 +85,7 @@ public final class ResponseParser {
   /** Parses a {@code GET /v1/models} success body. */
   public static ModelList parseModels(
       int status, Map<String, List<String>> headers, String body, String endpoint) {
-    Context ctx = new Context(status, headers, body, endpoint);
+    Context ctx = new Context(status, headers, body, endpoint, DEFAULT);
     JsonNode root = ctx.root();
     JsonNode modelsNode = root.get("models");
     if (modelsNode == null || !modelsNode.isArray()) {
@@ -117,11 +130,16 @@ public final class ResponseParser {
               ctx.levelProbabilities(node, path),
               ctx.number(node, "confidence", path + ".confidence"));
       default -> {
-        LOG.log(
-            Level.WARNING,
-            "Ignoring answer '{0}' with unrecognized type '{1}'; it remains in the raw body",
-            id,
-            type.textValue());
+        String unknown = type.textValue();
+        ctx.diagnostics()
+            .log(
+                Level.WARNING,
+                () ->
+                    "Ignoring answer '"
+                        + id
+                        + "' with unrecognized type '"
+                        + unknown
+                        + "'; it remains in the raw body");
         yield null;
       }
     };
@@ -129,7 +147,11 @@ public final class ResponseParser {
 
   /** Per-parse state: the source needed to build a precise validation exception. */
   private record Context(
-      int status, Map<String, List<String>> headers, String body, String endpoint) {
+      int status,
+      Map<String, List<String>> headers,
+      String body,
+      String endpoint,
+      Diagnostics diagnostics) {
 
     JsonNode root() {
       JsonNode root;

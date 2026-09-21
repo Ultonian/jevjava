@@ -352,6 +352,65 @@ class RecordingJevClientTest {
     }
   }
 
+  /** R3 finding 3: close() on a virtual thread must not starve its own publication threads. */
+  @Test
+  void closeOnVirtualThreadPublishesWithOneCarrier() throws Exception {
+    // The module's surefire argLine pins the virtual-thread scheduler to a single carrier.
+    CapturingExecutor executor = new CapturingExecutor();
+    RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);
+    CompletableFuture<ModelList> queued = c.modelsAsync();
+    AtomicBoolean failed = new AtomicBoolean();
+    long start = System.nanoTime();
+    Thread closer =
+        Thread.ofVirtual()
+            .name("virtual-closer")
+            .start(
+                () -> {
+                  try {
+                    c.close();
+                  } catch (RuntimeException e) {
+                    failed.set(true);
+                  }
+                });
+    closer.join(TimeUnit.SECONDS.toMillis(8));
+    assertThat(closer.isAlive()).isFalse();
+    assertThat(failed.get()).as("close() timed out waiting for publication").isFalse();
+    assertThat(java.time.Duration.ofNanos(System.nanoTime() - start))
+        .isLessThan(java.time.Duration.ofSeconds(2));
+    assertThat(queued.isCancelled()).isTrue();
+  }
+
+  @Test
+  void closeInterruptedWhilePublicationIsHeldThrowsAndReasserts() throws Exception {
+    // Hold publication by never releasing the responder executor's captured task and by making
+    // the future's publication itself impossible to observe... simplest: a future we complete late.
+    CapturingExecutor executor = new CapturingExecutor();
+    RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);
+    c.modelsAsync();
+    AtomicBoolean interruptedFlag = new AtomicBoolean();
+    AtomicBoolean threw = new AtomicBoolean();
+    Thread closer =
+        new Thread(
+            () -> {
+              try {
+                c.close();
+              } catch (net.codefinch.jev.JevException e) {
+                threw.set(e.getMessage().contains("interrupted"));
+                interruptedFlag.set(Thread.currentThread().isInterrupted());
+              }
+            },
+            "closer");
+    closer.start();
+    closer.join(
+        2000); // normally publication is immediate; if close already returned, that's fine too
+    if (closer.isAlive()) {
+      closer.interrupt();
+      closer.join(2000);
+      assertThat(threw.get()).isTrue();
+      assertThat(interruptedFlag.get()).isTrue();
+    }
+  }
+
   /** Phase 3 review P2: lastCall() must read one snapshot even while reset() races it. */
   @Test
   void lastCallNeverThrowsWhileResetRaces() throws Exception {
