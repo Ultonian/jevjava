@@ -728,20 +728,22 @@ public final class HttpJevClient implements JevClient {
             throw deadlineExceeded(attempt + 1, e);
           }
           final int attemptNumber = attempts;
+          final int retriesTotal = retry.maxRetries();
           log(
-              Level.DEBUG,
+              Level.INFO,
               () ->
                   spec.endpoint()
-                      + ": attempt "
-                      + attemptNumber
-                      + " failed ("
-                      + describe(e)
-                      + "); retrying in "
+                      + " retrying in "
                       + delay.toMillis()
-                      + " ms");
+                      + "ms (retry "
+                      + attemptNumber
+                      + "/"
+                      + retriesTotal
+                      + ") after "
+                      + describe(e));
           log(
-              Level.TRACE,
-              () -> spec.endpoint() + ": attempt " + attemptNumber + " failure: " + e.getMessage());
+              Level.DEBUG,
+              () -> spec.endpoint() + " attempt " + attemptNumber + " failure: " + e.getMessage());
           sleep(delay);
         }
       }
@@ -783,6 +785,7 @@ public final class HttpJevClient implements JevClient {
         response = exchange.get(budget.toNanos(), TimeUnit.NANOSECONDS);
       } catch (TimeoutException e) {
         exchange.cancel(true);
+        log(Level.INFO, () -> spec.endpoint() + " timed out after " + budget.toMillis() + "ms");
         throw new JevTimeoutException(
             spec.endpoint() + ": attempt timed out after " + budget.toMillis() + " ms", e);
       } catch (InterruptedException e) {
@@ -790,9 +793,12 @@ public final class HttpJevClient implements JevClient {
         Thread.currentThread().interrupt();
         throw new JevInterruptedException(spec.endpoint() + ": interrupted", e);
       } catch (CancellationException e) {
+        log(Level.INFO, () -> spec.endpoint() + " aborted by caller");
         throw cancelled(e);
       } catch (ExecutionException e) {
-        throw mapTransportFailure(e.getCause());
+        JevException failure = mapTransportFailure(e.getCause());
+        log(Level.INFO, () -> spec.endpoint() + " <- " + failure.getClass().getSimpleName());
+        throw failure;
       } finally {
         handle.clearInFlight();
       }
@@ -805,7 +811,7 @@ public final class HttpJevClient implements JevClient {
       String body = response.body();
       long elapsedMs = (config.nanoTime().getAsLong() - started) / 1_000_000;
       log(
-          Level.DEBUG,
+          Level.INFO,
           () ->
               spec.endpoint()
                   + " -> "
@@ -814,7 +820,7 @@ public final class HttpJevClient implements JevClient {
                   + elapsedMs
                   + " ms request_id="
                   + firstHeader(headers, "x-typesafe-request-id").orElse("-"));
-      log(Level.TRACE, () -> "<- headers " + Redaction.headers(headers) + " body " + body);
+      log(Level.DEBUG, () -> "<- headers " + Redaction.headers(headers) + " body " + body);
       int status = response.statusCode();
       if (status >= 200 && status < 300) {
         return spec.parser().parse(status, headers, body, spec.endpoint());
@@ -848,7 +854,7 @@ public final class HttpJevClient implements JevClient {
         throw new JevException("invalid request header: " + e.getMessage(), e);
       }
       log(
-          Level.TRACE,
+          Level.DEBUG,
           () ->
               "-> "
                   + spec.endpoint()

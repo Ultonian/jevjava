@@ -33,7 +33,7 @@ class JevClientBuilderTest {
     assertThat(c.retry()).isEqualTo(RetryPolicy.DEFAULT);
     assertThat(c.closeGracePeriod()).isEqualTo(Duration.ofSeconds(10));
     assertThat(c.publicationTimeout()).isEqualTo(Duration.ofSeconds(5));
-    assertThat(c.logLevel()).isEqualTo(Level.INFO);
+    assertThat(c.logLevel()).isEqualTo(Level.WARNING);
     assertThat(c.ownsHttpClient()).isTrue();
     assertThat(c.ownsExecutor()).isTrue();
     assertThat(c.defaultHeaders()).isEmpty();

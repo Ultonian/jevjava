@@ -25,14 +25,15 @@ import net.codefinch.jev.Usage;
  * Parses successful response bodies against the API schema.
  *
  * <p>Strict on what the schema requires, lenient on what it does not: unknown fields anywhere are
- * ignored; an answer whose {@code type} is an unrecognised string is dropped and logged; an answer
- * with a missing or non-string {@code type}, or a known type with missing or mistyped required
- * fields, fails the whole response with a {@link JevResponseValidationException} naming the field.
- * Required numbers are checked for presence, type and representability (a {@code long} in range, a
- * finite {@code double}) before conversion, so a missing value can never read as {@code 0} and an
- * out-of-range one can never wrap or become infinite. The body must be exactly one JSON document
- * and {@code answers} must be non-empty on the wire (schema {@code minProperties: 1}); answers of
- * unknown type are then dropped, which may leave the typed map empty.
+ * ignored; an answer whose {@code type} is an unrecognised string is dropped and logged at WARNING
+ * (as the Python SDK does); an answer with a missing or non-string {@code type}, or a known type
+ * with missing or mistyped required fields, fails the whole response with a {@link
+ * JevResponseValidationException} naming the field. Required numbers are checked for presence, type
+ * and representability (a {@code long} in range, a finite {@code double}) before conversion, so a
+ * missing value can never read as {@code 0} and an out-of-range one can never wrap or become
+ * infinite. The body must be exactly one JSON document and {@code answers} must be non-empty on the
+ * wire (schema {@code minProperties: 1}); answers of unknown type are then dropped, which may leave
+ * the typed map empty.
  */
 public final class ResponseParser {
   private static final Logger LOG = System.getLogger(ResponseParser.class.getName());
@@ -117,8 +118,8 @@ public final class ResponseParser {
               ctx.number(node, "confidence", path + ".confidence"));
       default -> {
         LOG.log(
-            Level.DEBUG,
-            "Dropping answer '{0}' of unknown type '{1}'; it remains in the raw body",
+            Level.WARNING,
+            "Ignoring answer '{0}' with unrecognized type '{1}'; it remains in the raw body",
             id,
             type.textValue());
         yield null;

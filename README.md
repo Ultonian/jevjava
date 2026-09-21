@@ -151,7 +151,7 @@ try {
 | API key | `apiKey` | `TYPESAFE_API_KEY` | required |
 | Base URL | `baseUrl` | `TYPESAFE_BASE_URL` | `https://api.typesafe.ai` |
 | Default model | `defaultModel` | `TYPESAFE_DEFAULT_MODEL` | `jev-latest` |
-| Log level | `logLevel` | `TYPESAFE_LOG_LEVEL` | `info` (headers/bodies only at `trace`, credentials redacted) |
+| Log level | `logLevel` | `TYPESAFE_LOG_LEVEL` | `warn`. As in the official SDKs: `info` = one line per attempt and retry; `debug` adds headers (credentials redacted) and bodies. Emitted via `System.Logger` |
 | Per-attempt timeout | `timeout` | — | 10 s |
 | Operation deadline | `deadline` / `noDeadline()` | — | 30 s |
 | Retry policy | `retryPolicy` | — | `RetryPolicy.DEFAULT` |

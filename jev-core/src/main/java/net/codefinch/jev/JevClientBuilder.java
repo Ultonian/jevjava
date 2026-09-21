@@ -153,7 +153,12 @@ public final class JevClientBuilder {
     return this;
   }
 
-  /** Minimum level this client logs at; otherwise {@code TYPESAFE_LOG_LEVEL}, then INFO. */
+  /**
+   * Minimum level this client logs at; otherwise {@code TYPESAFE_LOG_LEVEL}, then WARNING (the
+   * JavaScript SDK's default). Levels follow the official SDKs: one line per attempt and per retry
+   * at INFO, request/response headers (credentials redacted) and bodies at DEBUG, dropped answer
+   * kinds at WARNING. Records go to the {@code System.Logger} named after the transport class.
+   */
   public JevClientBuilder logLevel(Level level) {
     this.logLevel = Objects.requireNonNull(level, "level");
     return this;
@@ -297,7 +302,7 @@ public final class JevClientBuilder {
 
   private static Level parseLevel(String raw) {
     if (raw == null) {
-      return Level.INFO;
+      return Level.WARNING;
     }
     return switch (raw.toLowerCase(Locale.ROOT)) {
       case "trace" -> Level.TRACE;

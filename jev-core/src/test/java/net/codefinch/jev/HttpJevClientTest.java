@@ -688,9 +688,9 @@ class HttpJevClientTest {
       for (System.Logger.Level level :
           List.of(
               System.Logger.Level.OFF,
+              System.Logger.Level.WARNING,
               System.Logger.Level.INFO,
-              System.Logger.Level.DEBUG,
-              System.Logger.Level.TRACE)) {
+              System.Logger.Level.DEBUG)) {
         records.clear();
         server
             .enqueue(
@@ -712,12 +712,13 @@ class HttpJevClientTest {
         String all = records.stream().map(r -> r.getMessage()).reduce("", (a, b) -> a + "\n" + b);
         switch (level) {
           case OFF -> assertThat(records).as("OFF logs nothing, not even the retry").isEmpty();
-          case INFO -> assertThat(records).as("INFO: transport logs at DEBUG/TRACE only").isEmpty();
-          case DEBUG -> {
+          case WARNING ->
+              assertThat(records).as("WARNING (default): nothing for a healthy call").isEmpty();
+          case INFO -> {
             assertThat(all).contains("retrying in", "-> 500 in", "-> 200 in", "request_id=req-log");
             assertThat(all).doesNotContain("headers ", "Bearer", "test-key");
           }
-          case TRACE -> {
+          case DEBUG -> {
             assertThat(all).contains("-> POST", "<- headers", "body {", "\"jev-1.13.0\"");
             assertThat(all)
                 .contains(
@@ -1002,9 +1003,9 @@ class HttpJevClientTest {
       for (System.Logger.Level level :
           List.of(
               System.Logger.Level.OFF,
+              System.Logger.Level.WARNING,
               System.Logger.Level.INFO,
-              System.Logger.Level.DEBUG,
-              System.Logger.Level.TRACE)) {
+              System.Logger.Level.DEBUG)) {
         records.clear();
         server
             .enqueue(
@@ -1027,17 +1028,17 @@ class HttpJevClientTest {
         }
         String all = records.stream().map(r -> r.getMessage()).reduce("", (a, b) -> a + "\n" + b);
         switch (level) {
-          case OFF, INFO -> assertThat(records).isEmpty();
-          case DEBUG -> {
+          case OFF, WARNING -> assertThat(records).isEmpty();
+          case INFO -> {
             assertThat(all)
                 .contains(
-                    "failed (JevInternalServerException status=500); retrying in",
+                    "retrying in 500ms (retry 1/3) after JevInternalServerException status=500",
                     "status=502",
                     "status=503");
             assertThat(all)
                 .doesNotContain("review-raw-body-marker", "json-marker-7", "known-msg-marker");
           }
-          case TRACE ->
+          case DEBUG ->
               assertThat(all)
                   .contains("review-raw-body-marker", "json-marker-7", "known-msg-marker");
           default -> throw new AssertionError(level);

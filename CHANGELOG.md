@@ -7,6 +7,11 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Changed
+- Log levels now match the official SDKs: attempt summaries, retries, transport failures and
+  aborts at INFO; headers and bodies at DEBUG; dropped answer kinds at WARNING. The default gate
+  is WARNING (the JavaScript SDK's default), so healthy calls log nothing unless opted in.
+
 ### Added
 - Seven more examples in `jev-examples`, each mirroring a docs page and verified against the live
   API: `SupportTicketFanOut`, `ResumeScreening`, `VoiceBanking`, `IntentRouting`, `LineSearch`,
