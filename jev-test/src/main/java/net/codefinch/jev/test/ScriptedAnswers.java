@@ -144,10 +144,10 @@ public final class ScriptedAnswers {
     return Answers.of(answers);
   }
 
-  /** The response. Its raw body is a compact rendering of the answers. */
+  /** The response. Its raw body is the real wire JSON, so it parses exactly like an HTTP one. */
   public SystemOneResponse build() {
     Answers built = Answers.of(answers);
-    String body = "{\"model\":\"" + model + "\",\"answers\":" + built + ",\"usage\":" + usage + "}";
+    String body = WireJson.systemOne(model, built, usage);
     return new SystemOneResponse(model, built, usage, ResponseMetadata.of(headers, body));
   }
 

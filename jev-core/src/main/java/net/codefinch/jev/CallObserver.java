@@ -6,8 +6,13 @@ import java.util.OptionalInt;
 
 /**
  * Receives one event per HTTP attempt and one per call, for metrics and tracing. Register with
- * {@link JevClientBuilder#observer(CallObserver)}. Observers are invoked on SDK threads after the
- * fact; an observer that throws is logged and ignored, and never affects the call.
+ * {@link JevClientBuilder#observer(CallObserver)}.
+ *
+ * <p>Events are built when they happen but delivered asynchronously on SDK virtual threads, in
+ * order per call (its attempts, then its call event), never on the deadline timer, the closing
+ * thread or the operation thread. A slow or blocked observer therefore delays only its own event
+ * queue; an observer that throws is logged and ignored. Observation never affects the call, its
+ * result, its deadline or {@code close()}.
  */
 public interface CallObserver {
 

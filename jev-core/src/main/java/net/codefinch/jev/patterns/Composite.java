@@ -54,14 +54,21 @@ public final class Composite {
    */
   public double apply(Answers answers) {
     Objects.requireNonNull(answers, "answers");
+    // Rescale by the largest weight so every scaled weight is in (0, 1]: the sums cannot overflow,
+    // and a tiny (even Double.MIN_VALUE) uniform weight cannot underflow the weighted terms.
+    double max = 0;
+    for (double w : weights.values()) {
+      max = Math.max(max, w);
+    }
     double total = 0;
     double weightSum = 0;
     for (Map.Entry<String, Double> e : weights.entrySet()) {
       ScoreAnswer score = answers.score(e.getKey());
-      total += e.getValue() * normalised(score);
-      weightSum += e.getValue();
+      double scaled = e.getValue() / max;
+      total += scaled * normalised(score);
+      weightSum += scaled;
     }
-    return total / weightSum;
+    return Math.min(1.0, Math.max(0.0, total / weightSum));
   }
 
   /** {@code score / topLevel}, or 0 for a single-level rubric (which cannot spread). */

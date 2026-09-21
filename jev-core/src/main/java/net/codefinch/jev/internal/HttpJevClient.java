@@ -65,6 +65,8 @@ import net.codefinch.jev.SystemOneResponse;
  * or before the call's HTTP exchange and backoff are cancelled. A call stays tracked until its
  * result is <em>published</em> (the future is done), so {@code close()} can wait for publication —
  * a state transition that cannot block on application code — without waiting for callbacks.
+ * Observers are application code too: their events are built on the control path but dispatched on
+ * delivery threads, serialised per call, so a blocked observer delays nothing but its own queue.
  * Admission of a call is atomic with the transition to closed, under {@code lifecycle}. Only the
  * first {@code close()} shuts resources down; later or concurrent callers wait for its outcome and
  * then re-check publication, so every {@code close()} that returns normally has verified that every
@@ -508,6 +510,7 @@ public final class HttpJevClient implements JevClient {
     private volatile int attempts;
     private volatile JevException last;
     private volatile int lastStatus = -1;
+    private CompletableFuture<Void> observerChain = CompletableFuture.completedFuture(null);
 
     Call(Spec<T> spec, RequestOptions options, CallFuture<T> future) {
       this.spec = spec;
@@ -568,18 +571,33 @@ public final class HttpJevClient implements JevClient {
      * backed up by one, so no completion ever runs inline on a control thread.
      */
     void deliver(Runnable completion) {
-      Runnable publish =
+      safeDelivery(
           () -> {
             try {
               completion.run();
             } finally {
               published();
             }
-          };
+          });
+    }
+
+    /** Runs on the delivery executor, falling back to a fresh virtual thread if it rejects. */
+    private void safeDelivery(Runnable task) {
       try {
-        config.delivery().execute(publish);
+        config.delivery().execute(task);
       } catch (RejectedExecutionException e) {
-        Thread.startVirtualThread(publish);
+        Thread.startVirtualThread(task);
+      }
+    }
+
+    /**
+     * Queues an observer event behind this call's earlier events, on delivery threads: never on the
+     * deadline timer, the closing thread, the operation thread or the caller of {@code cancel()}.
+     */
+    private void dispatchToObservers(Runnable dispatch) {
+      synchronized (this) {
+        observerChain =
+            observerChain.thenRunAsync(dispatch, this::safeDelivery).exceptionally(t -> null);
       }
     }
 
@@ -622,13 +640,16 @@ public final class HttpJevClient implements JevClient {
               Optional.ofNullable(response).map(SystemOneResponse::model),
               Optional.ofNullable(response),
               Optional.ofNullable(failure));
-      for (CallObserver observer : config.observers()) {
-        try {
-          observer.onCall(event);
-        } catch (RuntimeException e) {
-          LOG.log(Level.WARNING, "CallObserver.onCall threw; ignoring", e);
-        }
-      }
+      dispatchToObservers(
+          () -> {
+            for (CallObserver observer : config.observers()) {
+              try {
+                observer.onCall(event);
+              } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "CallObserver.onCall threw; ignoring", e);
+              }
+            }
+          });
     }
 
     private void observeAttempt(int attempt, long started, int status, Throwable failure) {
@@ -642,13 +663,16 @@ public final class HttpJevClient implements JevClient {
               Duration.ofNanos(config.nanoTime().getAsLong() - started),
               status < 0 ? OptionalInt.empty() : OptionalInt.of(status),
               Optional.ofNullable(failure));
-      for (CallObserver observer : config.observers()) {
-        try {
-          observer.onAttempt(event);
-        } catch (RuntimeException e) {
-          LOG.log(Level.WARNING, "CallObserver.onAttempt threw; ignoring", e);
-        }
-      }
+      dispatchToObservers(
+          () -> {
+            for (CallObserver observer : config.observers()) {
+              try {
+                observer.onAttempt(event);
+              } catch (RuntimeException e) {
+                LOG.log(Level.WARNING, "CallObserver.onAttempt threw; ignoring", e);
+              }
+            }
+          });
     }
 
     T run() {

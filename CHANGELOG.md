@@ -7,6 +7,18 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Fixed (Phase 3 review)
+- Observer events are dispatched on delivery threads, serialised per call, never on the deadline
+  timer, the closing thread or the operation thread; a blocked observer no longer stalls other
+  deadlines or unbounds `close()`.
+- `RecordingJevClient` keeps the interface's lifecycle contract: async calls run on an executor
+  and return at once, `close()` cancels outstanding futures, calls after close throw
+  `IllegalStateException` (async included); `lastCall()` reads one snapshot.
+- `ScriptedAnswers` bodies are real wire JSON that the core parser accepts; the fake's default
+  models body matches its typed list.
+- `Composite.apply` rescales weights by the maximum, so extreme finite weights neither overflow
+  nor underflow the mean.
+
 ### Added (Phase 3)
 - `CallObserver`: per-attempt and per-call events from the client (operation, outcome, attempts,
   elapsed, status, model, response, failure); observers never affect the call.

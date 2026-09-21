@@ -123,6 +123,27 @@ class PatternsTest {
     assertThat(Composite.normalised(score(5.0, 3, 1.0))).as("clamped").isEqualTo(1.0);
   }
 
+  /** Phase 3 review P2: accepted finite weights must never overflow or underflow the mean. */
+  @Test
+  void compositeIsScaleInvariantAndFiniteAtBothExtremes() {
+    Answers half = Answers.of(Map.of("a", score(0.5, 2, 1), "b", score(0.5, 2, 1)));
+    Answers full = Answers.of(Map.of("a", score(1.0, 2, 1), "b", score(1.0, 2, 1)));
+    for (double w : new double[] {1.0, Double.MAX_VALUE, Double.MIN_VALUE, 1e-300, 1e300}) {
+      Composite c = Composite.score(Map.of("a", w, "b", w));
+      assertThat(c.apply(half)).as("weights " + w).isEqualTo(0.5);
+      assertThat(c.apply(full)).as("weights " + w).isEqualTo(1.0);
+    }
+    Composite mixed = Composite.score(Map.of("a", Double.MAX_VALUE, "b", 1.0));
+    assertThat(mixed.apply(Answers.of(Map.of("a", score(1.0, 2, 1), "b", score(0.0, 2, 1)))))
+        .isEqualTo(1.0);
+    Composite ratio = Composite.score(Map.of("a", 3e300, "b", 1e300));
+    assertThat(ratio.apply(Answers.of(Map.of("a", score(1.0, 2, 1), "b", score(0.0, 2, 1)))))
+        .isEqualTo(0.75);
+    Composite tiny = Composite.score(Map.of("a", 3e-300, "b", 1e-300));
+    assertThat(tiny.apply(Answers.of(Map.of("a", score(1.0, 2, 1), "b", score(0.0, 2, 1)))))
+        .isEqualTo(0.75);
+  }
+
   @Test
   void compositeValidation() {
     assertThatThrownBy(() -> Composite.score(Map.of())).hasMessageContaining("at least one");
