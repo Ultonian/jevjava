@@ -23,6 +23,13 @@ jobs:
           distribution: temurin
           java-version: ${{ matrix.java }}
           cache: maven
+      - name: Cache the Maven wrapper distribution
+        # setup-java caches ~/.m2/repository only; the wrapper downloads Maven itself into
+        # ~/.m2/wrapper, and a transient fetch failure there failed a job once.
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/wrapper
+          key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
       - name: Verify (compile -Werror, Checkstyle, tests, JaCoCo, SpotBugs)
         run: ./mvnw --batch-mode --no-transfer-progress verify
       - name: Upload JaCoCo report

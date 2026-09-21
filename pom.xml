@@ -44,7 +44,7 @@
     <!-- Reproducible builds: bump on release. -->
     <project.build.outputTimestamp>2026-09-20T00:00:00Z</project.build.outputTimestamp>
 
-    <jackson.version>2.19.0</jackson.version>
+    <jackson.version>2.22.2</jackson.version>
     <junit.version>5.13.0</junit.version>
     <assertj.version>3.27.3</assertj.version>
 

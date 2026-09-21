@@ -7,6 +7,10 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Security
+- Jackson 2.19.0 → 2.22.2: fixes GHSA-r7wm-3cxj-wff9 (jackson-core) and CVE-2026-54512 /
+  CVE-2026-54513 (jackson-databind), all HIGH, reported by Trivy on the first CI run.
+
 ### Added
 - Project skeleton with the quality gate (google-java-format via Spotless, Checkstyle Google style,
   SpotBugs max effort, JaCoCo 85 % line gate on `jev-core`, `-Werror`, pre-commit hooks, CI on
