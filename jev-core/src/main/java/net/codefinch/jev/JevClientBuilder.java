@@ -4,7 +4,9 @@ import java.lang.System.Logger.Level;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
@@ -78,6 +80,7 @@ public final class JevClientBuilder {
   private RandomGenerator random = RandomGenerator.getDefault();
   private Sleeper sleeper = Sleeper.REAL;
   private Executor delivery = Thread::startVirtualThread;
+  private final List<CallObserver> observers = new ArrayList<>();
 
   JevClientBuilder() {}
 
@@ -153,6 +156,15 @@ public final class JevClientBuilder {
   /** Minimum level this client logs at; otherwise {@code TYPESAFE_LOG_LEVEL}, then INFO. */
   public JevClientBuilder logLevel(Level level) {
     this.logLevel = Objects.requireNonNull(level, "level");
+    return this;
+  }
+
+  /**
+   * Registers an observer of attempt and call events (metrics, tracing). Observers run on SDK
+   * threads after the fact; one that throws is logged and ignored. May be called more than once.
+   */
+  public JevClientBuilder observer(CallObserver observer) {
+    observers.add(Objects.requireNonNull(observer, "observer"));
     return this;
   }
 
@@ -269,7 +281,8 @@ public final class JevClientBuilder {
             nanoTime,
             random,
             sleeper,
-            delivery);
+            delivery,
+            observers);
     return new HttpJevClient(config);
   }
 

@@ -5,6 +5,7 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
@@ -12,6 +13,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.LongSupplier;
 import java.util.random.RandomGenerator;
+import net.codefinch.jev.CallObserver;
 import net.codefinch.jev.RetryPolicy;
 
 /**
@@ -37,6 +39,7 @@ import net.codefinch.jev.RetryPolicy;
  * @param random jitter source
  * @param sleeper backoff waiter
  * @param delivery where public completions are published (default: a fresh virtual thread each)
+ * @param observers receive attempt and call events; never affect the call
  */
 public record ClientConfig(
     String apiKey,
@@ -56,13 +59,15 @@ public record ClientConfig(
     LongSupplier nanoTime,
     RandomGenerator random,
     Sleeper sleeper,
-    Executor delivery) {
+    Executor delivery,
+    List<CallObserver> observers) {
 
   /** Snapshots the headers into an unmodifiable, case-insensitive map. */
   public ClientConfig {
     Map<String, String> copy = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
     copy.putAll(defaultHeaders);
     defaultHeaders = Collections.unmodifiableMap(copy);
+    observers = List.copyOf(observers);
   }
 
   /** Omits the API key and redacts credential-bearing default headers. */

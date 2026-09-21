@@ -16,6 +16,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
@@ -31,6 +32,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Supplier;
+import net.codefinch.jev.CallObserver;
 import net.codefinch.jev.JevApiException;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.JevConnectionException;
@@ -354,7 +356,12 @@ public final class HttpJevClient implements JevClient {
 
   /** What to send and how to read the answer; independent of retries and timing. */
   private record Spec<T>(
-      String method, URI uri, String endpoint, Optional<String> body, Parser<T> parser) {}
+      String operation,
+      String method,
+      URI uri,
+      String endpoint,
+      Optional<String> body,
+      Parser<T> parser) {}
 
   private interface Parser<T> {
     T parse(int status, Map<String, List<String>> headers, String body, String endpoint);
@@ -365,13 +372,14 @@ public final class HttpJevClient implements JevClient {
     URI uri = URI.create(config.baseUrl() + SYSTEM_ONE_PATH);
     String body = RequestWriter.write(request, config.defaultModel());
     return new Spec<>(
-        "POST", uri, "POST " + uri, Optional.of(body), ResponseParser::parseSystemOne);
+        "systemone", "POST", uri, "POST " + uri, Optional.of(body), ResponseParser::parseSystemOne);
   }
 
   private Spec<ModelList> modelsSpec(RequestOptions options) {
     Objects.requireNonNull(options, "options");
     URI uri = URI.create(config.baseUrl() + MODELS_PATH);
-    return new Spec<>("GET", uri, "GET " + uri, Optional.empty(), ResponseParser::parseModels);
+    return new Spec<>(
+        "models", "GET", uri, "GET " + uri, Optional.empty(), ResponseParser::parseModels);
   }
 
   // ---------------------------------------------------------------------------------------------
@@ -381,12 +389,21 @@ public final class HttpJevClient implements JevClient {
   private <T> T runSync(Spec<T> spec, RequestOptions options) {
     Call<T> call = new Call<>(spec, options, null); // may run caller code; outside the lock
     admit(call);
+    T result;
     try {
-      return call.run();
-    } finally {
-      call.finish();
-      inFlight.remove(call); // sync: the return or throw is the publication
+      result = call.run();
+    } catch (Throwable t) {
+      if (call.finish()) {
+        call.observe(outcomeOf(t), null, t);
+      }
+      inFlight.remove(call); // sync: the throw is the publication
+      throw t;
     }
+    if (call.finish()) {
+      call.observe(CallObserver.Outcome.SUCCESS, result, null);
+    }
+    inFlight.remove(call); // sync: the return is the publication
+    return result;
   }
 
   private <T> CompletableFuture<T> runAsync(Spec<T> spec, RequestOptions options) {
@@ -408,22 +425,35 @@ public final class HttpJevClient implements JevClient {
                   result = call.run();
                 } catch (Throwable t) {
                   if (call.finish()) {
+                    call.observe(outcomeOf(t), null, t);
                     call.deliver(() -> future.completeExceptionally(t));
                   }
                   return;
                 }
                 if (call.finish()) {
+                  call.observe(CallObserver.Outcome.SUCCESS, result, null);
                   call.deliver(() -> future.complete(result));
                 }
               });
     } catch (RejectedExecutionException e) {
       if (call.finish()) {
         call.handle.cancel();
-        call.deliver(
-            () -> future.completeExceptionally(new JevException("executor rejected the call", e)));
+        JevException failure = new JevException("executor rejected the call", e);
+        call.observe(CallObserver.Outcome.ERROR, null, failure);
+        call.deliver(() -> future.completeExceptionally(failure));
       }
     }
     return future;
+  }
+
+  private static CallObserver.Outcome outcomeOf(Throwable t) {
+    if (t instanceof JevDeadlineExceededException) {
+      return CallObserver.Outcome.DEADLINE;
+    }
+    if (t instanceof CancellationException || t instanceof JevInterruptedException) {
+      return CallObserver.Outcome.CANCELLED;
+    }
+    return CallObserver.Outcome.ERROR;
   }
 
   /** Registers a call atomically with the closed check, so shutdown always sees it. */
@@ -447,6 +477,7 @@ public final class HttpJevClient implements JevClient {
         return super.cancel(mayInterruptIfRunning); // already terminal: no-op or plain CF semantics
       }
       c.handle.cancel(); // exchange and backoff are dead before any callback can observe this
+      c.observe(CallObserver.Outcome.CANCELLED, null, null);
       try {
         return super.cancel(
             mayInterruptIfRunning); // callbacks run on the cancelling caller's thread
@@ -476,6 +507,7 @@ public final class HttpJevClient implements JevClient {
     private volatile ScheduledFuture<?> timer;
     private volatile int attempts;
     private volatile JevException last;
+    private volatile int lastStatus = -1;
 
     Call(Spec<T> spec, RequestOptions options, CallFuture<T> future) {
       this.spec = spec;
@@ -556,6 +588,7 @@ public final class HttpJevClient implements JevClient {
       if (finish()) {
         handle.cancel();
         JevDeadlineExceededException failure = deadlineExceeded(attempts, last);
+        observe(CallObserver.Outcome.DEADLINE, null, failure);
         deliver(() -> future.completeExceptionally(failure));
       }
     }
@@ -564,10 +597,56 @@ public final class HttpJevClient implements JevClient {
     void cancelFromClient() {
       if (finish()) {
         handle.cancel();
+        observe(CallObserver.Outcome.CANCELLED, null, null);
         if (future != null) {
           CancellationException cancelled =
               new CancellationException(spec.endpoint() + ": client closed");
           deliver(() -> future.completeExceptionally(cancelled));
+        }
+      }
+    }
+
+    /** Emits the call event to every observer; exactly one per call, from the finish() winner. */
+    void observe(CallObserver.Outcome outcome, Object result, Throwable failure) {
+      if (config.observers().isEmpty()) {
+        return;
+      }
+      SystemOneResponse response = result instanceof SystemOneResponse r ? r : null;
+      CallObserver.Call event =
+          new CallObserver.Call(
+              spec.operation(),
+              outcome,
+              attempts,
+              Duration.ofNanos(config.nanoTime().getAsLong() - submittedAt),
+              lastStatus < 0 ? OptionalInt.empty() : OptionalInt.of(lastStatus),
+              Optional.ofNullable(response).map(SystemOneResponse::model),
+              Optional.ofNullable(response),
+              Optional.ofNullable(failure));
+      for (CallObserver observer : config.observers()) {
+        try {
+          observer.onCall(event);
+        } catch (RuntimeException e) {
+          LOG.log(Level.WARNING, "CallObserver.onCall threw; ignoring", e);
+        }
+      }
+    }
+
+    private void observeAttempt(int attempt, long started, int status, Throwable failure) {
+      if (config.observers().isEmpty()) {
+        return;
+      }
+      CallObserver.Attempt event =
+          new CallObserver.Attempt(
+              spec.operation(),
+              attempt + 1,
+              Duration.ofNanos(config.nanoTime().getAsLong() - started),
+              status < 0 ? OptionalInt.empty() : OptionalInt.of(status),
+              Optional.ofNullable(failure));
+      for (CallObserver observer : config.observers()) {
+        try {
+          observer.onAttempt(event);
+        } catch (RuntimeException e) {
+          LOG.log(Level.WARNING, "CallObserver.onAttempt threw; ignoring", e);
         }
       }
     }
@@ -626,6 +705,22 @@ public final class HttpJevClient implements JevClient {
     private T attempt(int attempt, Duration budget) {
       HttpRequest request = buildRequest(attempt, budget);
       final long started = config.nanoTime().getAsLong();
+      int status = -1;
+      Throwable failure = null;
+      try {
+        HttpResponse<String> response = exchange(request, budget);
+        status = response.statusCode();
+        lastStatus = status;
+        return handle(response, started);
+      } catch (Throwable t) {
+        failure = t;
+        throw t;
+      } finally {
+        observeAttempt(attempt, started, status, failure);
+      }
+    }
+
+    private HttpResponse<String> exchange(HttpRequest request, Duration budget) {
       CompletableFuture<HttpResponse<String>> exchange;
       try {
         exchange =
@@ -655,6 +750,10 @@ public final class HttpJevClient implements JevClient {
         handle.clearInFlight();
       }
       checkCancelled();
+      return response;
+    }
+
+    private T handle(HttpResponse<String> response, long started) {
       Map<String, List<String>> headers = response.headers().map();
       String body = response.body();
       long elapsedMs = (config.nanoTime().getAsLong() - started) / 1_000_000;

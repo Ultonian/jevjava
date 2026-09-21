@@ -7,6 +7,18 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Added (Phase 3)
+- `CallObserver`: per-attempt and per-call events from the client (operation, outcome, attempts,
+  elapsed, status, model, response, failure); observers never affect the call.
+- `net.codefinch.jev.patterns`: `FanOut` (one question per item, item bound structurally into
+  its instructions), `Composite` (normalised weighted score), `ConfidenceGate` and
+  `NoulThreshold` (three-way routing; thresholds always caller-supplied).
+- `jev-micrometer`: `JevMetrics` with bounded tags (`jev.call`, `jev.attempt`, `jev.tokens`) and
+  allowlisted per-question `jev.confidence` / `jev.noul` summaries; a 1 000-id cardinality test.
+- `jev-test`: `RecordingJevClient` and `ScriptedAnswers` — scripted or neutral answers shaped
+  from the questions, recorded requests, interface close semantics.
+- `jev-examples`: `TicketTriage`, runnable against the API or the fake; exercised in CI.
+
 ### Security
 - Jackson 2.19.0 → 2.22.2: fixes GHSA-r7wm-3cxj-wff9 (jackson-core) and CVE-2026-54512 /
   CVE-2026-54513 (jackson-databind), all HIGH, reported by Trivy on the first CI run.

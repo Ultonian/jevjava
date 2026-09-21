@@ -29,6 +29,9 @@
 
   <modules>
     <module>jev-core</module>
+    <module>jev-test</module>
+    <module>jev-micrometer</module>
+    <module>jev-examples</module>
   </modules>
 
   <scm>
@@ -47,6 +50,7 @@
     <jackson.version>2.22.2</jackson.version>
     <junit.version>5.13.0</junit.version>
     <assertj.version>3.27.3</assertj.version>
+    <micrometer.version>1.17.1</micrometer.version>
 
     <checkstyle.version>10.26.1</checkstyle.version>
     <google-java-format.version>1.27.0</google-java-format.version>
@@ -59,6 +63,13 @@
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
         <version>${jackson.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>io.micrometer</groupId>
+        <artifactId>micrometer-bom</artifactId>
+        <version>${micrometer.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
