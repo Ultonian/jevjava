@@ -1,6 +1,7 @@
 package net.codefinch.jev.test;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
@@ -14,6 +15,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.JevException;
 import net.codefinch.jev.ModelList;
@@ -31,12 +33,21 @@ import net.codefinch.jev.SystemOneResponse;
  *
  * <p>Lifecycle follows the {@link JevClient} contract the HTTP client implements: synchronous calls
  * run on the caller's thread; asynchronous calls run their responder on an executor (a fresh
- * virtual thread each by default) and return at once; cancelling the returned future stops its
- * result from being published; calls after {@link #close()} throw {@link IllegalStateException};
- * and {@code close()} completes every outstanding future with {@link CancellationException}, so a
- * responder that finishes later is discarded. Thread-safe.
+ * virtual thread each by default) and return at once, registered atomically with admission;
+ * completions — results and cancellations alike — are published on a fresh virtual thread, never on
+ * the responder executor or the closing thread; cancelling the returned future stops its result
+ * from being published; calls after {@link #close()} throw {@link IllegalStateException}; and
+ * {@code close()} completes every outstanding future with {@link CancellationException}, waiting
+ * only for publication (never for continuations), so a responder that finishes later is discarded.
+ * Thread-safe.
  */
 public final class RecordingJevClient implements JevClient {
+
+  /**
+   * How long {@link #close()} waits for cancellations to be published (never for continuations).
+   */
+  static final Duration PUBLICATION_WAIT = Duration.ofSeconds(5);
+
   private final Deque<Function<SystemOneRequest, SystemOneResponse>> script = new ArrayDeque<>();
   private final List<RecordedCall> calls = new CopyOnWriteArrayList<>();
   private final Set<CompletableFuture<?>> inFlight = ConcurrentHashMap.newKeySet();
@@ -60,7 +71,8 @@ public final class RecordingJevClient implements JevClient {
 
   /**
    * A client with the given clock and the executor async responders run on. A same-thread executor
-   * ({@code Runnable::run}) makes async calls complete synchronously, which some tests prefer.
+   * ({@code Runnable::run}) runs the responder before {@code systemOneAsync} returns; the result is
+   * still published on a virtual thread.
    */
   public RecordingJevClient(Clock clock, Executor executor) {
     this.clock = Objects.requireNonNull(clock, "clock");
@@ -161,8 +173,7 @@ public final class RecordingJevClient implements JevClient {
   public SystemOneResponse systemOne(SystemOneRequest request, RequestOptions options) {
     Objects.requireNonNull(request, "request");
     Objects.requireNonNull(options, "options");
-    Function<SystemOneRequest, SystemOneResponse> responder = admitSystemOne(request, options);
-    return responder.apply(request);
+    return admitSystemOne(request, options, null).apply(request);
   }
 
   @Override
@@ -170,37 +181,54 @@ public final class RecordingJevClient implements JevClient {
       SystemOneRequest request, RequestOptions options) {
     Objects.requireNonNull(request, "request");
     Objects.requireNonNull(options, "options");
-    Function<SystemOneRequest, SystemOneResponse> responder = admitSystemOne(request, options);
-    return runAsync(() -> responder.apply(request));
+    CompletableFuture<SystemOneResponse> future = new CompletableFuture<>();
+    Function<SystemOneRequest, SystemOneResponse> responder =
+        admitSystemOne(request, options, future);
+    return runAsync(future, () -> responder.apply(request));
   }
 
   @Override
   public ModelList models(RequestOptions options) {
     Objects.requireNonNull(options, "options");
-    admit(new RecordedCall("models", Optional.empty(), options, clock.instant()));
+    admit(new RecordedCall("models", Optional.empty(), options, clock.instant()), null);
     return models;
   }
 
   @Override
   public CompletableFuture<ModelList> modelsAsync(RequestOptions options) {
     Objects.requireNonNull(options, "options");
-    admit(new RecordedCall("models", Optional.empty(), options, clock.instant()));
+    CompletableFuture<ModelList> future = new CompletableFuture<>();
+    admit(new RecordedCall("models", Optional.empty(), options, clock.instant()), future);
     ModelList current = models;
-    return runAsync(() -> current);
+    return runAsync(future, () -> current);
   }
 
   /**
-   * Stops admission, then completes every outstanding future with {@link CancellationException}.
+   * Stops admission (atomically with registration), publishes a {@link CancellationException} into
+   * every outstanding future on a fresh virtual thread each, and returns once each is done — never
+   * waiting for application continuations. Throws {@link JevException} if publication does not
+   * complete within {@link #PUBLICATION_WAIT}, so an unmet guarantee is observable.
    */
   @Override
   public void close() {
+    List<CompletableFuture<?>> outstanding;
     synchronized (lifecycle) {
       closed = true;
+      outstanding = List.copyOf(inFlight);
     }
-    for (CompletableFuture<?> f : inFlight) {
-      f.completeExceptionally(new CancellationException("client closed"));
+    for (CompletableFuture<?> f : outstanding) {
+      publish(f, () -> f.completeExceptionally(new CancellationException("client closed")));
     }
-    inFlight.clear();
+    long until = System.nanoTime() + PUBLICATION_WAIT.toNanos();
+    for (CompletableFuture<?> f : outstanding) {
+      while (!f.isDone()) {
+        if (System.nanoTime() >= until) {
+          throw new JevException(
+              "close(): a result was still unpublished after " + PUBLICATION_WAIT);
+        }
+        Thread.onSpinWait();
+      }
+    }
   }
 
   /** Whether {@link #close()} has been called. */
@@ -211,40 +239,58 @@ public final class RecordingJevClient implements JevClient {
   }
 
   private Function<SystemOneRequest, SystemOneResponse> admitSystemOne(
-      SystemOneRequest request, RequestOptions options) {
-    admit(new RecordedCall("systemone", Optional.of(request), options, clock.instant()));
+      SystemOneRequest request, RequestOptions options, CompletableFuture<?> future) {
+    admit(new RecordedCall("systemone", Optional.of(request), options, clock.instant()), future);
     synchronized (script) {
       Function<SystemOneRequest, SystemOneResponse> next = script.pollFirst();
       return next != null ? next : defaultResponder;
     }
   }
 
-  /** Records the call atomically with the closed check, like the HTTP client's admission. */
-  private void admit(RecordedCall call) {
+  /**
+   * Records the call and registers its future atomically with the closed check, like the HTTP
+   * client's admission: a call is either rejected or visible to {@link #close()}, never in between.
+   */
+  private void admit(RecordedCall call, CompletableFuture<?> future) {
     synchronized (lifecycle) {
       if (closed) {
         throw new IllegalStateException("JevClient is closed");
       }
       calls.add(call);
+      if (future != null) {
+        inFlight.add(future);
+        future.whenComplete((r, t) -> inFlight.remove(future));
+      }
     }
   }
 
-  private <T> CompletableFuture<T> runAsync(java.util.function.Supplier<T> work) {
-    CompletableFuture<T> future = new CompletableFuture<>();
-    inFlight.add(future);
-    future.whenComplete((r, t) -> inFlight.remove(future));
-    executor.execute(
-        () -> {
-          if (future.isDone()) {
-            return; // cancelled or closed before it started
-          }
-          try {
-            T result = work.get();
-            future.complete(result); // a no-op if cancelled or closed meanwhile: result discarded
-          } catch (Throwable e) {
-            future.completeExceptionally(e);
-          }
-        });
+  private <T> CompletableFuture<T> runAsync(CompletableFuture<T> future, Supplier<T> work) {
+    try {
+      executor.execute(
+          () -> {
+            if (future.isDone()) {
+              return; // cancelled or closed before it started
+            }
+            T result;
+            try {
+              result = work.get();
+            } catch (Throwable e) {
+              publish(future, () -> future.completeExceptionally(e));
+              return;
+            }
+            publish(future, () -> future.complete(result)); // no-op if cancelled/closed meanwhile
+          });
+    } catch (RuntimeException rejected) {
+      publish(future, () -> future.completeExceptionally(rejected));
+    }
     return future;
+  }
+
+  /** Publishes a completion on a fresh virtual thread: continuations never run on the caller. */
+  private static void publish(CompletableFuture<?> future, Runnable completion) {
+    if (future.isDone()) {
+      return;
+    }
+    Thread.startVirtualThread(completion);
   }
 }

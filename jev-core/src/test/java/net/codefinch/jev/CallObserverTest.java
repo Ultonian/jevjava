@@ -343,12 +343,28 @@ class CallObserverTest {
       assertThat(f.get(2, TimeUnit.SECONDS).model())
           .as("a second call completes while observers are blocked")
           .isEqualTo("jev-1.13.0");
-      CompletableFuture<ModelList> cancelled =
-          c.modelsAsync(RequestOptions.builder().noDeadline().build());
+    } finally {
+      observer.release.countDown();
+    }
+    // Cancel-before-start on a separate client whose executor is held, so the models call provably
+    // never starts (no scheduling race, no third attempt event).
+    ExecutorService held = Executors.newSingleThreadExecutor();
+    CountDownLatch occupied = new CountDownLatch(1);
+    held.submit(() -> occupied.await(10, TimeUnit.SECONDS));
+    try (JevClient c2 =
+        JevClient.builder()
+            .apiKey("k")
+            .baseUrl(server.baseUrl())
+            .observer(observer)
+            .executor(held)
+            .noDeadline()
+            .build()) {
+      CompletableFuture<ModelList> cancelled = c2.modelsAsync();
       cancelled.cancel(true);
       assertThat(cancelled.isCancelled()).isTrue();
     } finally {
-      observer.release.countDown();
+      occupied.countDown();
+      held.shutdownNow();
     }
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
     while ((observer.attempts.size() < 2 || observer.calls.size() < 3) && System.nanoTime() < end) {
@@ -392,6 +408,55 @@ class CallObserverTest {
     assertThat(order).containsExactly("attempt1", "attempt2", "attempt3", "call:SUCCESS");
     assertThat(threads).allMatch(Thread::isVirtual);
     assertThat(threads).noneMatch(t -> t.getName().contains("jev-deadline"));
+  }
+
+  /** R2 finding 3: a terminal event never overtakes an attempt that had already started. */
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"cancel", "deadline", "close"})
+  void attemptStartedBeforeTerminationIsDeliveredBeforeTheTerminalEvent(String path)
+      throws Exception {
+    server.enqueue(TestServer.Scripted.json(200, OK).stallingHeaders(Duration.ofSeconds(5)));
+    List<String> order = new CopyOnWriteArrayList<>();
+    CountDownLatch terminal = new CountDownLatch(1);
+    CallObserver ordering =
+        new CallObserver() {
+          @Override
+          public void onAttempt(Attempt attempt) {
+            order.add("attempt" + attempt.attempt());
+          }
+
+          @Override
+          public void onCall(Call call) {
+            order.add("call:" + call.outcome());
+            terminal.countDown();
+          }
+        };
+    JevClientBuilder b =
+        JevClient.builder()
+            .apiKey("k")
+            .baseUrl(server.baseUrl())
+            .observer(ordering)
+            .timeout(Duration.ofSeconds(10))
+            .closeGracePeriod(Duration.ZERO);
+    JevClient c =
+        (path.equals("deadline") ? b.deadline(Duration.ofMillis(300)) : b.noDeadline()).build();
+    CompletableFuture<SystemOneResponse> f = c.systemOneAsync(REQUEST);
+    long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+    while (server.requests().isEmpty() && System.nanoTime() < end) {
+      Thread.sleep(5); // the worker is now inside the attempt, waiting on the stalled exchange
+    }
+    assertThat(server.requests()).hasSize(1);
+    switch (path) {
+      case "cancel" -> f.cancel(true);
+      case "close" -> c.close();
+      default -> {
+        // deadline: nothing to do, it expires on its own
+      }
+    }
+    assertThat(terminal.await(5, TimeUnit.SECONDS)).isTrue();
+    String expected = path.equals("deadline") ? "call:DEADLINE" : "call:CANCELLED";
+    assertThat(order).as(path).containsExactly("attempt1", expected);
+    c.close();
   }
 
   private void awaitEvents(int calls) {

@@ -7,6 +7,15 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Fixed (Phase 3 review, second pass)
+- Observer events keep their promised order even when cancellation, deadline expiry or `close()`
+  ends a call mid-attempt: an attempt reserves its slot in the call's event sequence when it
+  starts, so the terminal event is delivered after it.
+- `RecordingJevClient` registers async calls atomically with admission, publishes every
+  completion (results and cancellations) on a virtual thread, and bounds `close()` on publication
+  only — never on application continuations.
+- A cancellation observer test no longer depends on a scheduling race.
+
 ### Fixed (Phase 3 review)
 - Observer events are dispatched on delivery threads, serialised per call, never on the deadline
   timer, the closing thread or the operation thread; a blocked observer no longer stalls other

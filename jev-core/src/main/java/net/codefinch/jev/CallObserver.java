@@ -9,10 +9,12 @@ import java.util.OptionalInt;
  * {@link JevClientBuilder#observer(CallObserver)}.
  *
  * <p>Events are built when they happen but delivered asynchronously on SDK virtual threads, in
- * order per call (its attempts, then its call event), never on the deadline timer, the closing
- * thread or the operation thread. A slow or blocked observer therefore delays only its own event
- * queue; an observer that throws is logged and ignored. Observation never affects the call, its
- * result, its deadline or {@code close()}.
+ * order per call: every attempt that started, in order, then the call event — even when
+ * cancellation, deadline expiry or {@code close()} ends the call while an attempt is still in
+ * flight. Delivery is never on the deadline timer, the closing thread or the operation thread. A
+ * slow or blocked observer therefore delays only its own event queue; an observer that throws is
+ * logged and ignored. Observation never affects the call, its result, its deadline or {@code
+ * close()}.
  */
 public interface CallObserver {
 

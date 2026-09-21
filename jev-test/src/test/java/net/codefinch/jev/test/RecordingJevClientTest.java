@@ -216,8 +216,139 @@ class RecordingJevClientTest {
     }
     try (RecordingJevClient sync = new RecordingJevClient(Clock.systemUTC(), Runnable::run)) {
       CompletableFuture<SystemOneResponse> f = sync.systemOneAsync(REQUEST);
-      assertThat(f.isDone()).as("same-thread executor completes before returning").isTrue();
-      assertThat(f.get().answers().noul("refund").noul()).isEqualTo(0.5);
+      assertThat(f.get(2, TimeUnit.SECONDS).answers().noul("refund").noul())
+          .as("same-thread executor ran the responder; the result is published asynchronously")
+          .isEqualTo(0.5);
+    }
+  }
+
+  /** Captures async tasks without running them, so admission and close can be interleaved. */
+  static final class CapturingExecutor implements java.util.concurrent.Executor {
+    final List<Runnable> tasks = new java.util.concurrent.CopyOnWriteArrayList<>();
+
+    @Override
+    public void execute(Runnable r) {
+      tasks.add(r);
+    }
+  }
+
+  /**
+   * R2 finding 1: a call admitted before close() is always visible to it, for both async methods.
+   */
+  @Test
+  void asyncCallsAdmittedBeforeCloseAreCancelledByItAndNeverRunAfterwards() throws Exception {
+    CapturingExecutor executor = new CapturingExecutor();
+    RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);
+    AtomicBoolean responderRan = new AtomicBoolean();
+    c.respondWith(
+        req -> {
+          responderRan.set(true);
+          return ScriptedAnswers.neutralResponse(req.questions());
+        });
+    CompletableFuture<SystemOneResponse> s1 = c.systemOneAsync(REQUEST);
+    CompletableFuture<ModelList> m1 = c.modelsAsync();
+    assertThat(executor.tasks).hasSize(2);
+    c.close();
+    assertThat(s1.isDone()).as("done when close returned").isTrue();
+    assertThat(m1.isDone()).isTrue();
+    assertThat(s1.isCancelled()).isTrue();
+    assertThat(m1.isCancelled()).isTrue();
+    executor.tasks.forEach(Runnable::run); // the tasks are released after shutdown
+    assertThat(responderRan.get()).as("a cancelled task never runs its responder").isFalse();
+    assertThatThrownBy(() -> s1.get(1, TimeUnit.SECONDS)).isInstanceOf(CancellationException.class);
+
+    // Stress: submissions racing close() are each either rejected or cancelled, never lost.
+    CapturingExecutor executor2 = new CapturingExecutor();
+    RecordingJevClient c2 = new RecordingJevClient(Clock.systemUTC(), executor2);
+    List<CompletableFuture<?>> futures = new java.util.concurrent.CopyOnWriteArrayList<>();
+    AtomicBoolean stop = new AtomicBoolean();
+    Thread submitter =
+        new Thread(
+            () -> {
+              while (!stop.get()) {
+                try {
+                  futures.add(c2.modelsAsync());
+                } catch (IllegalStateException rejected) {
+                  return;
+                }
+              }
+            });
+    submitter.start();
+    Thread.sleep(20);
+    c2.close();
+    stop.set(true);
+    submitter.join(2000);
+    assertThat(futures)
+        .isNotEmpty()
+        .allMatch(CompletableFuture::isDone)
+        .allMatch(CompletableFuture::isCancelled);
+    executor2.tasks.forEach(Runnable::run);
+    assertThat(futures)
+        .as("no result published after close")
+        .allMatch(CompletableFuture::isCancelled);
+  }
+
+  /**
+   * R2 finding 2: completions are published off the closing thread and off the responder executor.
+   */
+  @Test
+  void closeDoesNotRunContinuationsOnTheClosingThreadNorWaitForThem() throws Exception {
+    CapturingExecutor executor = new CapturingExecutor();
+    RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);
+    CompletableFuture<ModelList> a = c.modelsAsync();
+    CompletableFuture<ModelList> b = c.modelsAsync();
+    CountDownLatch entered = new CountDownLatch(2);
+    CountDownLatch release = new CountDownLatch(1);
+    List<Thread> callbackThreads = new java.util.concurrent.CopyOnWriteArrayList<>();
+    for (CompletableFuture<ModelList> f : List.of(a, b)) {
+      f.whenComplete(
+          (r, t) -> {
+            callbackThreads.add(Thread.currentThread());
+            entered.countDown();
+            try {
+              release.await(10, TimeUnit.SECONDS);
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+          });
+    }
+    Thread closer = new Thread(c::close, "fake-closer");
+    closer.start();
+    try {
+      closer.join(2000);
+      assertThat(closer.isAlive())
+          .as("close() returned while both continuations are blocked")
+          .isFalse();
+      assertThat(a.isDone()).isTrue();
+      assertThat(b.isDone()).isTrue();
+      assertThat(entered.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThat(callbackThreads)
+          .hasSize(2)
+          .allMatch(Thread::isVirtual)
+          .noneMatch(t -> t.getName().equals("fake-closer"));
+      c.close(); // repeated close: a no-op that still returns
+    } finally {
+      release.countDown();
+    }
+
+    // Normal completions: the continuation runs on a publication thread, not the responder
+    // executor. The callback is registered before the captured task runs, so it cannot run inline.
+    CapturingExecutor executor2 = new CapturingExecutor();
+    CountDownLatch done = new CountDownLatch(1);
+    List<Thread> normal = new java.util.concurrent.CopyOnWriteArrayList<>();
+    try (RecordingJevClient c2 = new RecordingJevClient(Clock.systemUTC(), executor2)) {
+      CompletableFuture<ModelList> f = c2.modelsAsync();
+      f.whenComplete(
+          (r, t) -> {
+            normal.add(Thread.currentThread());
+            done.countDown();
+          });
+      Thread responder = new Thread(executor2.tasks.get(0), "responder-exec");
+      responder.start();
+      responder.join(2000);
+      assertThat(done.await(2, TimeUnit.SECONDS)).isTrue();
+      assertThat(normal.get(0).getName()).isNotEqualTo("responder-exec");
+      assertThat(normal.get(0).isVirtual()).isTrue();
     }
   }
 

@@ -591,14 +591,30 @@ public final class HttpJevClient implements JevClient {
     }
 
     /**
-     * Queues an observer event behind this call's earlier events, on delivery threads: never on the
-     * deadline timer, the closing thread, the operation thread or the caller of {@code cancel()}.
+     * Queues an observer event behind this call's earlier events (and behind any reserved attempt
+     * slot), on delivery threads: never on the deadline timer, the closing thread, the operation
+     * thread or the caller of {@code cancel()}.
      */
     private void dispatchToObservers(Runnable dispatch) {
+      CompletableFuture<Runnable> slot = reserveObserverSlot();
+      slot.complete(dispatch);
+    }
+
+    /**
+     * Reserves the next position in this call's event sequence. An attempt reserves its slot when
+     * it starts and fills it when it ends, so a terminal event enqueued while the attempt is still
+     * running is delivered after it — without any control thread waiting for the worker.
+     */
+    private CompletableFuture<Runnable> reserveObserverSlot() {
+      CompletableFuture<Runnable> slot = new CompletableFuture<>();
       synchronized (this) {
         observerChain =
-            observerChain.thenRunAsync(dispatch, this::safeDelivery).exceptionally(t -> null);
+            observerChain
+                .thenCompose(v -> slot)
+                .thenAcceptAsync(Runnable::run, this::safeDelivery)
+                .exceptionally(t -> null);
       }
+      return slot;
     }
 
     /** The deadline passed while the call was queued or running: cancel first, then deliver. */
@@ -652,8 +668,13 @@ public final class HttpJevClient implements JevClient {
           });
     }
 
-    private void observeAttempt(int attempt, long started, int status, Throwable failure) {
-      if (config.observers().isEmpty()) {
+    private void observeAttempt(
+        CompletableFuture<Runnable> slot,
+        int attempt,
+        long started,
+        int status,
+        Throwable failure) {
+      if (slot == null) {
         return;
       }
       CallObserver.Attempt event =
@@ -663,7 +684,7 @@ public final class HttpJevClient implements JevClient {
               Duration.ofNanos(config.nanoTime().getAsLong() - started),
               status < 0 ? OptionalInt.empty() : OptionalInt.of(status),
               Optional.ofNullable(failure));
-      dispatchToObservers(
+      slot.complete(
           () -> {
             for (CallObserver observer : config.observers()) {
               try {
@@ -729,6 +750,8 @@ public final class HttpJevClient implements JevClient {
     private T attempt(int attempt, Duration budget) {
       HttpRequest request = buildRequest(attempt, budget);
       final long started = config.nanoTime().getAsLong();
+      final CompletableFuture<Runnable> slot =
+          config.observers().isEmpty() ? null : reserveObserverSlot();
       int status = -1;
       Throwable failure = null;
       try {
@@ -740,7 +763,7 @@ public final class HttpJevClient implements JevClient {
         failure = t;
         throw t;
       } finally {
-        observeAttempt(attempt, started, status, failure);
+        observeAttempt(slot, attempt, started, status, failure);
       }
     }
 
