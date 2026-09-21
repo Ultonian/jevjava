@@ -48,7 +48,7 @@
         <artifactId>exec-maven-plugin</artifactId>
         <version>3.6.4</version>
         <configuration>
-          <mainClass>net.codefinch.jev.examples.TicketTriage</mainClass>
+          <mainClass>net.codefinch.jev.examples.AllExamples</mainClass>
         </configuration>
       </plugin>
     </plugins>

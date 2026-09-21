@@ -12,7 +12,7 @@ how each behaviour compares with the official Python and JavaScript SDKs and the
 | `jev-core` | Jackson only | The client, request/answer types, `patterns` helpers |
 | `jev-micrometer` | `jev-core`, Micrometer | `JevMetrics`, a `CallObserver` recording timers, token counters and allowlisted confidence summaries |
 | `jev-test` | `jev-core` | `RecordingJevClient`, an in-memory `JevClient` with scripted answers and recorded requests (use with `test` scope) |
-| `jev-examples` | — | `TicketTriage`; not published |
+| `jev-examples` | — | eight runnable examples mirroring the docs; not published |
 
 ## Routing on answers
 
@@ -51,10 +51,15 @@ RecordingJevClient fake = new RecordingJevClient()                  // jev-test
 // ... run the code under test with `fake` as its JevClient, then inspect fake.requests()
 ```
 
-## Example
+## Examples
+
+Eight runnable examples in [`jev-examples`](jev-examples/README.md), each mirroring a page of the
+TypeSafe docs (speculative fan-out, composite scoring, confidence-gated routing, intent routing,
+line search, re-ranking, entity alignment) with its questions and thresholds in one file. They
+run against the live API with `TYPESAFE_API_KEY`, otherwise against a scripted fake.
 
 ```sh
-./mvnw -q -DskipTests install && ./mvnw -q -pl jev-examples exec:java   # TicketTriage; uses the fake without TYPESAFE_API_KEY
+./mvnw -q -DskipTests install && ./mvnw -q -pl jev-examples exec:java
 ```
 
 ## Building

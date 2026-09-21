@@ -7,6 +7,12 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Added
+- Seven more examples in `jev-examples`, each mirroring a docs page and verified against the live
+  API: `SupportTicketFanOut`, `ResumeScreening`, `VoiceBanking`, `IntentRouting`, `LineSearch`,
+  `Rerank` (the `FanOut` helper), `EntityAlignment`; an `AllExamples` runner and an opt-in
+  `LiveExamplesTest`.
+
 ### Fixed (Phase 3 review, second pass)
 - Observer events keep their promised order even when cancellation, deadline expiry or `close()`
   ends a call mid-attempt: an attempt reserves its slot in the call's event sequence when it
