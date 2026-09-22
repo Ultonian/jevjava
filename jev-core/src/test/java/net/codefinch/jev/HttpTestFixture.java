@@ -11,6 +11,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.random.RandomGenerator;
 import net.codefinch.jev.internal.Sleeper;
 
@@ -65,22 +66,40 @@ final class HttpTestFixture implements AutoCloseable {
 
   /** Holds publications until released, then runs each on a fresh virtual thread. */
   static final class HoldingDelivery implements java.util.concurrent.Executor {
-    final List<Runnable> held = new java.util.concurrent.CopyOnWriteArrayList<>();
-    volatile boolean open;
+    final List<Runnable> held;
+    private final Consumer<Runnable> start;
+    private boolean open; // guarded by this
+
+    HoldingDelivery() {
+      this(new java.util.concurrent.CopyOnWriteArrayList<>(), Thread::startVirtualThread);
+    }
+
+    /** Controlled queue and thread launch for this fixture's own concurrency tests. */
+    HoldingDelivery(List<Runnable> held, Consumer<Runnable> start) {
+      this.held = held;
+      this.start = start;
+    }
 
     @Override
     public void execute(Runnable r) {
-      if (open) {
-        Thread.startVirtualThread(r);
-      } else {
-        held.add(r);
+      synchronized (this) {
+        if (!open) {
+          held.add(r);
+          return;
+        }
       }
+      start.accept(r);
     }
 
     void release() {
-      open = true;
-      held.forEach(Thread::startVirtualThread);
-      held.clear();
+      List<Runnable> pending;
+      synchronized (this) {
+        open = true;
+        pending = List.copyOf(held);
+        held.clear();
+      }
+      // A concurrent release sees an empty queue; launching never holds the admission lock.
+      pending.forEach(start);
     }
   }
 

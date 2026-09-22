@@ -48,6 +48,8 @@ The fake keeps separate state and no HTTP retry engine. Its private `executeAndP
 | Shared fake/HTTP guarantees | Public client contract through two controlled fixture adapters | [ClientContractTest](../jev-test/src/test/java/net/codefinch/jev/test/ClientContractTest.java) |
 | Logging and metrics | Existing diagnostic sink and observer adapter | [HttpDiagnosticsTest](../jev-core/src/test/java/net/codefinch/jev/HttpDiagnosticsTest.java), [JevMetricsTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsTest.java), [JevMetricsIntegrationTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsIntegrationTest.java) |
 
+The controlled `HttpTestFixture.HoldingDelivery` queue also uses one monitor for open/check/enqueue and open/snapshot/clear. It launches tasks outside the monitor so concurrent release and new submissions can proceed independently. [HoldingDeliveryTest](../jev-core/src/test/java/net/codefinch/jev/HoldingDeliveryTest.java) forces the enqueue/clear and concurrent-release interleavings.
+
 See [the test relocation inventory](REFACTORING_TEST_INVENTORY.md) for original method locations.
 
 ## Where to change behavior
