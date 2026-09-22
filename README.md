@@ -211,3 +211,11 @@ run against the live API with `TYPESAFE_API_KEY`, otherwise against a scripted f
 ./mvnw verify          # compile (-Werror), Checkstyle, tests, JaCoCo >= 85 % on core, SpotBugs
 pre-commit install --install-hooks   # once per clone; runs the same gate before every commit
 ```
+
+The gate needs no credentials. To also run the live probes, copy `.env.example` to `.env`
+(git-ignored), add your key, and source it into the shell first:
+
+```sh
+set -a; . ./.env; set +a
+./mvnw verify                        # LiveApiTest / LiveExamplesTest now run against the API
+```
