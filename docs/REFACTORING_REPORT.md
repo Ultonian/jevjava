@@ -67,7 +67,15 @@ A sorted `javap -protected -s` inventory of publicly declared classes across all
 
 A normalized comparison of 32 critical call, shutdown and request-specification method bodies confirmed their preservation after explicit renaming and delegation to the HTTP helper. Constructor dependency wiring, public execution entry points and registry release were reviewed separately. These checks complement the integration tests; examples still compile and execute unchanged.
 
-Authenticated live tests remain opt-in and were not run. Hosted CI is tracked on the PR; publication and Phase 4 release readiness remain separate from this refactoring verification.
+Authenticated live tests were not run during the initial refactoring verification; the subsequent run is recorded below. Hosted CI is tracked on the PR; publication and Phase 4 release readiness remain separate from this refactoring verification.
+
+## Post-merge live verification
+
+On 22 September 2026, after PR #1 merged as `c5a3eb8`, full Maven verification (`./mvnw -B verify`) passed on OpenJDK 25 with `JEV_RUN_LIVE_TESTS=1` and credentials loaded from the local `.env`. All 298 tests passed with no failures, errors or skips. The four live cases include the three API probes and the example runner covering all eight examples.
+
+The service returned `jev-latest` and `jev-preview` from model discovery, and inference resolved to `jev-1.13.0`. An invalid key returned HTTP 401; an 11-level score and a 256-option choice returned HTTP 400 with the expected limits. Omitted and explicit-null instructions produced scores of 0.89 and 0.88, within the probe's tolerance. Formatting, Checkstyle, coverage, Javadoc and SpotBugs checks also passed.
+
+The original console output was saved locally to `/tmp/jevjava-live-verify.log`, with per-module Surefire reports under `target/surefire-reports/`. These are temporary, untracked artifacts; this section records the results permanently.
 
 ## CI follow-up: callback-thread assertion
 

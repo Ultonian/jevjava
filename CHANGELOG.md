@@ -7,6 +7,32 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenA
 
 ## [Unreleased]
 
+### Changed (readability refactor)
+- Split HTTP client responsibilities between `HttpJevClient` (admission and shutdown),
+  package-private `CallExecution` (per-call lifecycle), `HttpExchange` (one HTTP exchange), and
+  `CallSpec` (endpoint and parser). Public API signatures, wire behavior and configuration
+  defaults remain unchanged.
+- Organised `RecordingJevClient` around script, recording and lifecycle ownership, with explicit
+  execution and publication helpers; it retains an independent implementation.
+- Split transport and observer regression tests into focused suites with a shared HTTP fixture.
+- Clarified that SDK result publication uses virtual threads, while non-async
+  `CompletableFuture` callbacks follow the JDK's execution rules.
+
+### Added (readability refactor)
+- Eight shared lifecycle contracts exercised against both HTTP and recording clients.
+- [Internal architecture](docs/INTERNAL_ARCHITECTURE.md),
+  [test relocation inventory](docs/REFACTORING_TEST_INVENTORY.md), and
+  [refactoring verification report](docs/REFACTORING_REPORT.md). Verification passed on JDK 21
+  and 25; the subsequent live-service run on JDK 25 passed all 298 tests with no skips,
+  including all eight examples (22 September 2026).
+
+### Fixed (readability refactor review)
+- Removed a race in the shared contract's callback-thread assertion by awaiting the dependent
+  callback before reading the source result.
+- Made the test fixture's held-delivery queue transitions atomic with release, preventing lost
+  or duplicate deliveries; task launches remain outside the lock. Added three deterministic
+  regression cases.
+
 ### Fixed (Phase 3 review, fourth pass)
 - A failure while building the HTTP request (for example an invalid header name from
   `RequestOptions`) now settles the attempt's reserved observer slot, so the call's terminal
