@@ -33,20 +33,20 @@ Do not complete public futures, cancel HTTP work, invoke observers, or submit ar
 
 Shutdown waits for the second fact, never the third. Tracking removal can occur after continuations return; therefore registry emptiness is not a publication test. Calls remain registered through the publication handoff. Repeated/concurrent closers observe the first shutdown and check public-result state within their own bounded budget. Interruption reasserts the interrupt flag and reports an unmet close guarantee.
 
-The fake keeps separate state and no HTTP retry engine. Its lifecycle lock covers closed-check, recording and future registration. Script selection uses the script lock after admission. Responder execution and result publication happen outside both locks. Close snapshots admitted futures, publishes cancellations independently, and parks while waiting for future state so it remains usable on a single virtual-thread carrier.
+The fake keeps separate state and no HTTP retry engine. Its private `executeAndPublish` and `awaitPublication` helpers make execution and publication waiting explicit. Its lifecycle lock covers closed-check, recording and future registration. Script selection uses the script lock after admission. Responder execution and result publication happen outside both locks. Close snapshots admitted futures, publishes cancellations independently, and parks while waiting for future state so it remains usable on a single virtual-thread carrier.
 
 ## Reading paths and regression tests
 
 | Behavior | Reading path | Tests |
 |---|---|---|
-| Ordinary request | Facade builds spec and admits call; call executes exchange and parser, claims outcome, publishes | `HttpRequestTest`, `CallObserverTest` |
-| Retry | Call computes remaining budget, executes attempt, applies existing policy and cancellable backoff | `HttpRetryTest`, `RetryPolicyTest` |
-| Deadline | Call arms independent scheduler; expiry claims outcome, cancels work, and publishes | `HttpDeadlineTest`, `HttpPublicationTest` |
-| Cancellation | Cancellation-aware future claims outcome before cancelling handle and publishing | `HttpCancellationTest` |
-| Observer ordering | Attempt start reserves slot; attempt cleanup fills it; terminal event follows | `CallObserverLifecycleTest`, `HttpObserverLifecycleTest` |
-| Concurrent close | Client stops admission, cancels admitted work, checks publication and resource ownership | `HttpShutdownTest`, `HttpPublicationTest` |
-| Shared fake/HTTP guarantees | Public client contract through two controlled fixture adapters | `ClientContractTest` |
-| Logging and metrics | Existing diagnostic sink and observer adapter | `HttpDiagnosticsTest`, `JevMetricsTest`, `JevMetricsIntegrationTest` |
+| Ordinary request | Facade builds spec and admits call; call executes exchange and parser, claims outcome, publishes | [HttpRequestTest](../jev-core/src/test/java/net/codefinch/jev/HttpRequestTest.java), [CallObserverTest](../jev-core/src/test/java/net/codefinch/jev/CallObserverTest.java) |
+| Retry | Call computes remaining budget, executes attempt, applies existing policy and cancellable backoff | [HttpRetryTest](../jev-core/src/test/java/net/codefinch/jev/HttpRetryTest.java), [RetryPolicyTest](../jev-core/src/test/java/net/codefinch/jev/RetryPolicyTest.java) |
+| Deadline | Call arms independent scheduler; expiry claims outcome, cancels work, and publishes | [HttpDeadlineTest](../jev-core/src/test/java/net/codefinch/jev/HttpDeadlineTest.java), [HttpPublicationTest](../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
+| Cancellation | Cancellation-aware future claims outcome before cancelling handle and publishing | [HttpCancellationTest](../jev-core/src/test/java/net/codefinch/jev/HttpCancellationTest.java) |
+| Observer ordering | Attempt start reserves slot; attempt cleanup fills it; terminal event follows | [CallObserverLifecycleTest](../jev-core/src/test/java/net/codefinch/jev/CallObserverLifecycleTest.java), [HttpObserverLifecycleTest](../jev-core/src/test/java/net/codefinch/jev/HttpObserverLifecycleTest.java) |
+| Concurrent close | Client stops admission, cancels admitted work, checks publication and resource ownership | [HttpShutdownTest](../jev-core/src/test/java/net/codefinch/jev/HttpShutdownTest.java), [HttpPublicationTest](../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
+| Shared fake/HTTP guarantees | Public client contract through two controlled fixture adapters | [ClientContractTest](../jev-test/src/test/java/net/codefinch/jev/test/ClientContractTest.java) |
+| Logging and metrics | Existing diagnostic sink and observer adapter | [HttpDiagnosticsTest](../jev-core/src/test/java/net/codefinch/jev/HttpDiagnosticsTest.java), [JevMetricsTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsTest.java), [JevMetricsIntegrationTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsIntegrationTest.java) |
 
 See [the test relocation inventory](REFACTORING_TEST_INVENTORY.md) for original method locations.
 
