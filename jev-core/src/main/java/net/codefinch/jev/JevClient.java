@@ -28,10 +28,15 @@ import java.util.concurrent.CompletableFuture;
  *
  * <h2>Completion threads</h2>
  *
- * <p>Futures returned by async methods are completed on an SDK-owned virtual thread, after the call
- * has been fully torn down. Callbacks attached with non-{@code Async} methods therefore run on that
- * thread (or on the caller's own thread for {@code cancel()}), never on the deadline timer or the
- * thread calling {@link #close()}; a blocking callback delays only its own future.
+ * <p>The SDK publishes async results on an SDK-owned virtual thread, after tearing down the call;
+ * explicit {@code cancel()} completes on the cancelling caller's thread. Publication stays off the
+ * deadline scheduler and the thread calling {@link #close()}, so blocked callbacks do not hold up
+ * client shutdown.
+ *
+ * <p>Non-{@code Async} callbacks follow {@link CompletableFuture}'s execution rules. They can run
+ * on the publishing thread, on a caller attaching to an already-completed future, or on a waiting
+ * thread that helps process completion. Use an {@code Async} continuation with an explicit executor
+ * when a callback requires a particular execution context.
  *
  * <h2>Shutdown</h2>
  *

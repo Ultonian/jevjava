@@ -1,76 +1,33 @@
 package net.codefinch.jev.internal;
 
-import java.io.IOException;
 import java.lang.System.Logger;
-import java.lang.System.Logger.Level;
 import java.net.URI;
 import java.net.http.HttpClient;
-import java.net.http.HttpConnectTimeoutException;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.net.http.HttpTimeoutException;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.OptionalInt;
 import java.util.Set;
-import java.util.TreeMap;
-import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
-import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
-import net.codefinch.jev.CallObserver;
-import net.codefinch.jev.JevApiException;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.JevConnectionException;
-import net.codefinch.jev.JevDeadlineExceededException;
 import net.codefinch.jev.JevException;
-import net.codefinch.jev.JevInterruptedException;
-import net.codefinch.jev.JevRateLimitException;
-import net.codefinch.jev.JevTimeoutException;
 import net.codefinch.jev.ModelList;
 import net.codefinch.jev.RequestOptions;
-import net.codefinch.jev.RetryPolicy;
 import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.SystemOneResponse;
 
 /**
- * The HTTP {@link JevClient}. See the interface for the lifecycle contract; this class is not API.
+ * The HTTP {@link JevClient}. Owns admission, outstanding-call tracking and bounded resource
+ * shutdown. Each admitted {@link CallExecution} owns its operation state and publication.
  *
- * <p>Every call is a {@link Call}: it captures its submission time before any executor hand-off, so
- * the operation deadline covers queueing. Async calls additionally arm a timer on the client's own
- * scheduler that, at the absolute deadline, fails the public future with {@link
- * JevDeadlineExceededException} and cancels the call — even if the caller's executor never ran it.
- * {@link #close()} completes every outstanding future with {@link CancellationException} for the
- * same reason.
- *
- * <p>Lifecycle bookkeeping is separated from delivery of the public result: every terminal path
- * first wins {@link Call#finish()} (which disarms the timer and, for abnormal ends, cancels the
- * handle) and only then hands the completion to the delivery executor — by default a fresh virtual
- * thread per completion, so there is no pool to shut down and no rejection path. Application
- * callbacks therefore never run on the deadline scheduler, on the thread calling {@code close()},
- * or before the call's HTTP exchange and backoff are cancelled. A call stays tracked until its
- * result is <em>published</em> (the future is done), so {@code close()} can wait for publication —
- * a state transition that cannot block on application code — without waiting for callbacks.
- * Observers are application code too: their events are built on the control path but dispatched on
- * delivery threads, serialised per call, so a blocked observer delays nothing but its own queue.
- * Admission of a call is atomic with the transition to closed, under {@code lifecycle}. Only the
- * first {@code close()} shuts resources down; later or concurrent callers wait for its outcome and
- * then re-check publication, so every {@code close()} that returns normally has verified that every
- * future is done.
+ * <p>Admission and the transition to closing share one lock. Cancellation and application code run
+ * outside it. Close checks public-future state, never callback completion or registry emptiness;
+ * concurrent and repeated closers recheck publication within their own bounded shutdown budget. See
+ * {@code docs/INTERNAL_ARCHITECTURE.md} for the threading and ownership map.
  */
 public final class HttpJevClient implements JevClient {
   private static final Logger LOG = System.getLogger(HttpJevClient.class.getName());
@@ -84,21 +41,11 @@ public final class HttpJevClient implements JevClient {
   /** Header carrying the zero-based retry number on retries; stripped from caller headers. */
   public static final String RETRY_COUNT_HEADER = "X-TypeSafe-Retry-Count";
 
-  /** Headers the SDK sets itself; caller values for these are ignored. */
-  static final Set<String> PROTECTED =
-      Set.of(
-          "authorization",
-          "accept",
-          "content-type",
-          "user-agent",
-          "x-typesafe-sdk",
-          "x-typesafe-runtime",
-          "x-typesafe-retry-count");
-
   private final ClientConfig config;
   private final Diagnostics diagnostics;
+  private final HttpExchange exchange;
 
-  private final Set<Call<?>> inFlight = ConcurrentHashMap.newKeySet();
+  private final Set<CallExecution<?>> inFlight = ConcurrentHashMap.newKeySet();
   private final ScheduledThreadPoolExecutor scheduler;
   private final Object lifecycle = new Object();
   private Phase phase = Phase.OPEN; // guarded by lifecycle
@@ -114,6 +61,7 @@ public final class HttpJevClient implements JevClient {
   public HttpJevClient(ClientConfig config) {
     this.config = Objects.requireNonNull(config, "config");
     this.diagnostics = Diagnostics.of(LOG, config.logLevel());
+    this.exchange = new HttpExchange(config, diagnostics);
     this.scheduler =
         new ScheduledThreadPoolExecutor(
             1,
@@ -130,7 +78,7 @@ public final class HttpJevClient implements JevClient {
     return config;
   }
 
-  /** Number of calls currently tracked (admitted and not yet published). For diagnostics. */
+  /** Number of calls retained for tracking, including pending delivery callbacks. */
   public int trackedCalls() {
     return inFlight.size();
   }
@@ -241,7 +189,7 @@ public final class HttpJevClient implements JevClient {
         break;
       }
     }
-    for (Call<?> call : inFlight) {
+    for (CallExecution<?> call : inFlight) {
       call.cancelFromClient();
     }
     String unpublished = null;
@@ -285,8 +233,8 @@ public final class HttpJevClient implements JevClient {
 
   private int unpublishedCount() {
     int n = 0;
-    for (Call<?> call : inFlight) {
-      if (call.future != null && !call.future.isDone()) {
+    for (CallExecution<?> call : inFlight) {
+      if (call.hasUnpublishedResult()) {
         n++;
       }
     }
@@ -321,8 +269,8 @@ public final class HttpJevClient implements JevClient {
   }
 
   private boolean anyUnfinished() {
-    for (Call<?> call : inFlight) {
-      if (!call.isFinished()) {
+    for (CallExecution<?> call : inFlight) {
+      if (!call.hasClaimedOutcome()) {
         return true;
       }
     }
@@ -365,24 +313,12 @@ public final class HttpJevClient implements JevClient {
   // Call specs
   // ---------------------------------------------------------------------------------------------
 
-  /** What to send and how to read the answer; independent of retries and timing. */
-  private record Spec<T>(
-      String operation,
-      String method,
-      URI uri,
-      String endpoint,
-      Optional<String> body,
-      Parser<T> parser) {}
-
-  private interface Parser<T> {
-    T parse(int status, Map<String, List<String>> headers, String body, String endpoint);
-  }
-
-  private Spec<SystemOneResponse> systemOneSpec(SystemOneRequest request, RequestOptions options) {
+  private CallSpec<SystemOneResponse> systemOneSpec(
+      SystemOneRequest request, RequestOptions options) {
     Objects.requireNonNull(options, "options");
     URI uri = URI.create(config.baseUrl() + SYSTEM_ONE_PATH);
     String body = RequestWriter.write(request, config.defaultModel());
-    return new Spec<>(
+    return new CallSpec<>(
         "systemone",
         "POST",
         uri,
@@ -391,10 +327,10 @@ public final class HttpJevClient implements JevClient {
         (st, h, b, e) -> ResponseParser.parseSystemOne(st, h, b, e, diagnostics));
   }
 
-  private Spec<ModelList> modelsSpec(RequestOptions options) {
+  private CallSpec<ModelList> modelsSpec(RequestOptions options) {
     Objects.requireNonNull(options, "options");
     URI uri = URI.create(config.baseUrl() + MODELS_PATH);
-    return new Spec<>(
+    return new CallSpec<>(
         "models", "GET", uri, "GET " + uri, Optional.empty(), ResponseParser::parseModels);
   }
 
@@ -402,592 +338,32 @@ public final class HttpJevClient implements JevClient {
   // Execution
   // ---------------------------------------------------------------------------------------------
 
-  private <T> T runSync(Spec<T> spec, RequestOptions options) {
-    Call<T> call = new Call<>(spec, options, null); // may run caller code; outside the lock
+  private <T> T runSync(CallSpec<T> spec, RequestOptions options) {
+    CallExecution<T> call = createCall(spec, options, false);
     admit(call);
-    T result;
-    try {
-      result = call.run();
-    } catch (Throwable t) {
-      if (call.finish()) {
-        call.observe(outcomeOf(t), null, t);
-      }
-      inFlight.remove(call); // sync: the throw is the publication
-      throw t;
-    }
-    if (call.finish()) {
-      call.observe(CallObserver.Outcome.SUCCESS, result, null);
-    }
-    inFlight.remove(call); // sync: the return is the publication
-    return result;
+    return call.runSync();
   }
 
-  private <T> CompletableFuture<T> runAsync(Spec<T> spec, RequestOptions options) {
-    CallFuture<T> future = new CallFuture<>();
-    Call<T> call = new Call<>(spec, options, future);
-    future.call = call;
+  private <T> CompletableFuture<T> runAsync(CallSpec<T> spec, RequestOptions options) {
+    CallExecution<T> call = createCall(spec, options, true);
     admit(call);
-    call.armDeadline();
-    try {
-      config
-          .executor()
-          .execute(
-              () -> {
-                if (call.handle.isCancelled() || call.isFinished()) {
-                  return; // cancelled, expired or closed while queued
-                }
-                T result;
-                try {
-                  result = call.run();
-                } catch (Throwable t) {
-                  if (call.finish()) {
-                    call.observe(outcomeOf(t), null, t);
-                    call.deliver(() -> future.completeExceptionally(t));
-                  }
-                  return;
-                }
-                if (call.finish()) {
-                  call.observe(CallObserver.Outcome.SUCCESS, result, null);
-                  call.deliver(() -> future.complete(result));
-                }
-              });
-    } catch (RejectedExecutionException e) {
-      if (call.finish()) {
-        call.handle.cancel();
-        JevException failure = new JevException("executor rejected the call", e);
-        call.observe(CallObserver.Outcome.ERROR, null, failure);
-        call.deliver(() -> future.completeExceptionally(failure));
-      }
-    }
-    return future;
+    return call.runAsync();
   }
 
-  private static CallObserver.Outcome outcomeOf(Throwable t) {
-    if (t instanceof JevDeadlineExceededException) {
-      return CallObserver.Outcome.DEADLINE;
-    }
-    if (t instanceof CancellationException || t instanceof JevInterruptedException) {
-      return CallObserver.Outcome.CANCELLED;
-    }
-    return CallObserver.Outcome.ERROR;
+  /** Resolves caller-provided options outside the admission lock. */
+  private <T> CallExecution<T> createCall(
+      CallSpec<T> spec, RequestOptions options, boolean asynchronous) {
+    return new CallExecution<>(
+        spec, options, asynchronous, config, diagnostics, exchange, scheduler, inFlight::remove);
   }
 
   /** Registers a call atomically with the closed check, so shutdown always sees it. */
-  private void admit(Call<?> call) {
+  private void admit(CallExecution<?> call) {
     synchronized (lifecycle) {
       if (phase != Phase.OPEN) {
         throw new IllegalStateException("JevClient is closed");
       }
       inFlight.add(call);
     }
-  }
-
-  /** A {@link CompletableFuture} whose cancellation reaches the running call first. */
-  private static final class CallFuture<T> extends CompletableFuture<T> {
-    private volatile Call<T> call;
-
-    @Override
-    public boolean cancel(boolean mayInterruptIfRunning) {
-      Call<T> c = call;
-      if (c == null || !c.finish()) {
-        return super.cancel(mayInterruptIfRunning); // already terminal: no-op or plain CF semantics
-      }
-      c.handle.cancel(); // exchange and backoff are dead before any callback can observe this
-      c.observe(CallObserver.Outcome.CANCELLED, null, null);
-      try {
-        return super.cancel(
-            mayInterruptIfRunning); // callbacks run on the cancelling caller's thread
-      } finally {
-        c.published(); // cancellation is visible on the result: release tracking (idempotent)
-      }
-    }
-
-    @Override
-    public <U> CompletableFuture<U> newIncompleteFuture() {
-      return new CompletableFuture<>();
-    }
-  }
-
-  /** One operation: attempts, retries, deadline, cancellation. */
-  private final class Call<T> {
-    final CallHandle handle = new CallHandle();
-    private final Spec<T> spec;
-    private final RequestOptions options;
-    private final RetryPolicy retry;
-    private final Duration attemptTimeout;
-    private final Optional<Duration> deadline;
-    private final long submittedAt;
-    private final Optional<Long> deadlineAt;
-    private final CallFuture<T> future; // null for synchronous calls
-    private final AtomicBoolean finished = new AtomicBoolean();
-    private volatile ScheduledFuture<?> timer;
-    private volatile int attempts;
-    private volatile JevException last;
-    private volatile int lastStatus = -1;
-    private CompletableFuture<Void> observerChain = CompletableFuture.completedFuture(null);
-
-    Call(Spec<T> spec, RequestOptions options, CallFuture<T> future) {
-      this.spec = spec;
-      this.options = options;
-      this.future = future;
-      this.retry = options.resolveRetry(config.retry());
-      this.attemptTimeout = options.timeout().orElse(config.timeout());
-      this.deadline =
-          options.deadlineDisabled() ? Optional.empty() : options.deadline().or(config::deadline);
-      this.submittedAt = config.nanoTime().getAsLong();
-      this.deadlineAt = deadline.map(d -> submittedAt + d.toNanos());
-    }
-
-    /** Schedules expiry of an async call independently of its executor. */
-    void armDeadline() {
-      deadlineAt.ifPresent(
-          at -> {
-            long delay = Math.max(0, at - config.nanoTime().getAsLong());
-            try {
-              timer = scheduler.schedule(this::expire, delay, TimeUnit.NANOSECONDS);
-              if (finished.get()) {
-                timer.cancel(false); // finished before the timer was stored
-              }
-            } catch (RejectedExecutionException e) {
-              cancelFromClient(); // scheduler is down: the client closed under us
-            }
-          });
-    }
-
-    /**
-     * Claims the terminal state. Exactly one caller wins and must then deliver the outcome. Winning
-     * disarms the timer and never touches application callbacks. The call stays tracked until the
-     * outcome is published, so {@link #close()} can still see it in the hand-off gap.
-     */
-    boolean finish() {
-      synchronized (
-          this) { // atomic with startAttempt(): termination and attempt start never interleave
-        if (!finished.compareAndSet(false, true)) {
-          return false;
-        }
-      }
-      ScheduledFuture<?> t = timer;
-      if (t != null) {
-        t.cancel(false);
-      }
-      return true;
-    }
-
-    boolean isFinished() {
-      return finished.get();
-    }
-
-    /** The outcome is visible on the public result; stop tracking. Idempotent. */
-    void published() {
-      inFlight.remove(this);
-    }
-
-    /**
-     * Publishes a completion on a delivery thread, never on the caller of this method. The default
-     * delivery starts a fresh virtual thread and cannot reject; an injected delivery that does is
-     * backed up by one, so no completion ever runs inline on a control thread.
-     */
-    void deliver(Runnable completion) {
-      safeDelivery(
-          () -> {
-            try {
-              completion.run();
-            } finally {
-              published();
-            }
-          });
-    }
-
-    /** Runs on the delivery executor, falling back to a fresh virtual thread if it rejects. */
-    private void safeDelivery(Runnable task) {
-      try {
-        config.delivery().execute(task);
-      } catch (RejectedExecutionException e) {
-        Thread.startVirtualThread(task);
-      }
-    }
-
-    /**
-     * Queues an observer event behind this call's earlier events (and behind any reserved attempt
-     * slot), on delivery threads: never on the deadline timer, the closing thread, the operation
-     * thread or the caller of {@code cancel()}.
-     */
-    private void dispatchToObservers(Runnable dispatch) {
-      CompletableFuture<Runnable> slot = reserveObserverSlot();
-      slot.complete(dispatch);
-    }
-
-    /**
-     * Reserves the next position in this call's event sequence. An attempt reserves its slot when
-     * it starts and fills it when it ends, so a terminal event enqueued while the attempt is still
-     * running is delivered after it — without any control thread waiting for the worker.
-     */
-    private CompletableFuture<Runnable> reserveObserverSlot() {
-      CompletableFuture<Runnable> slot = new CompletableFuture<>();
-      synchronized (this) {
-        observerChain =
-            observerChain
-                .thenCompose(v -> slot)
-                .thenAcceptAsync(Runnable::run, this::safeDelivery)
-                .exceptionally(t -> null);
-      }
-      return slot;
-    }
-
-    /** The deadline passed while the call was queued or running: cancel first, then deliver. */
-    private void expire() {
-      if (finish()) {
-        handle.cancel();
-        JevDeadlineExceededException failure = deadlineExceeded(attempts, last);
-        observe(CallObserver.Outcome.DEADLINE, null, failure);
-        deliver(() -> future.completeExceptionally(failure));
-      }
-    }
-
-    /** {@link #close()} reached this call before it finished. */
-    void cancelFromClient() {
-      if (finish()) {
-        handle.cancel();
-        observe(CallObserver.Outcome.CANCELLED, null, null);
-        if (future != null) {
-          CancellationException cancelled =
-              new CancellationException(spec.endpoint() + ": client closed");
-          deliver(() -> future.completeExceptionally(cancelled));
-        }
-      }
-    }
-
-    /** Emits the call event to every observer; exactly one per call, from the finish() winner. */
-    void observe(CallObserver.Outcome outcome, Object result, Throwable failure) {
-      if (config.observers().isEmpty()) {
-        return;
-      }
-      SystemOneResponse response = result instanceof SystemOneResponse r ? r : null;
-      CallObserver.Call event =
-          new CallObserver.Call(
-              spec.operation(),
-              outcome,
-              attempts,
-              Duration.ofNanos(config.nanoTime().getAsLong() - submittedAt),
-              lastStatus < 0 ? OptionalInt.empty() : OptionalInt.of(lastStatus),
-              Optional.ofNullable(response).map(SystemOneResponse::model),
-              Optional.ofNullable(response),
-              Optional.ofNullable(failure));
-      dispatchToObservers(
-          () -> {
-            for (CallObserver observer : config.observers()) {
-              try {
-                observer.onCall(event);
-              } catch (RuntimeException e) {
-                diagnostics.log(Level.WARNING, () -> "CallObserver.onCall threw; ignoring", e);
-              }
-            }
-          });
-    }
-
-    private void observeAttempt(
-        CompletableFuture<Runnable> slot,
-        int attempt,
-        long started,
-        int status,
-        Throwable failure) {
-      if (slot == null) {
-        return;
-      }
-      CallObserver.Attempt event =
-          new CallObserver.Attempt(
-              spec.operation(),
-              attempt + 1,
-              Duration.ofNanos(config.nanoTime().getAsLong() - started),
-              status < 0 ? OptionalInt.empty() : OptionalInt.of(status),
-              Optional.ofNullable(failure));
-      slot.complete(
-          () -> {
-            for (CallObserver observer : config.observers()) {
-              try {
-                observer.onAttempt(event);
-              } catch (RuntimeException e) {
-                diagnostics.log(Level.WARNING, () -> "CallObserver.onAttempt threw; ignoring", e);
-              }
-            }
-          });
-    }
-
-    T run() {
-      for (int attempt = 0; ; attempt++) {
-        checkCancelled();
-        Duration budget = attemptTimeout;
-        if (deadlineAt.isPresent()) {
-          long remaining = deadlineAt.get() - config.nanoTime().getAsLong();
-          if (remaining <= 0) {
-            throw deadlineExceeded(attempt, last);
-          }
-          budget = min(budget, Duration.ofNanos(remaining));
-        }
-        final CompletableFuture<Runnable> slot = startAttempt(attempt);
-        try {
-          return attempt(attempt, budget, slot);
-        } catch (JevException e) {
-          last = e;
-          checkCancelled();
-          if (e instanceof JevInterruptedException) {
-            throw e;
-          }
-          if (deadlineAt.isPresent() && deadlineAt.get() - config.nanoTime().getAsLong() <= 0) {
-            throw deadlineExceeded(attempt + 1, e);
-          }
-          if (attempt >= retry.maxRetries() || !retry.isRetryable(e)) {
-            throw e;
-          }
-          Duration delay = retry.delay(attempt, serverDelay(e), config.random());
-          if (deadlineAt.isPresent()
-              && config.nanoTime().getAsLong() + delay.toNanos() >= deadlineAt.get()) {
-            throw deadlineExceeded(attempt + 1, e);
-          }
-          final int attemptNumber = attempts;
-          final int retriesTotal = retry.maxRetries();
-          log(
-              Level.INFO,
-              () ->
-                  spec.endpoint()
-                      + " retrying in "
-                      + delay.toMillis()
-                      + "ms (retry "
-                      + attemptNumber
-                      + "/"
-                      + retriesTotal
-                      + ") after "
-                      + describe(e));
-          log(
-              Level.DEBUG,
-              () -> spec.endpoint() + " attempt " + attemptNumber + " failure: " + e.getMessage());
-          sleep(delay);
-        }
-      }
-    }
-
-    /**
-     * Decides, atomically with any terminal transition, that this attempt starts: if the call has
-     * already finished the attempt never starts; otherwise its observer slot is reserved before any
-     * terminal event can be enqueued, so attempts always precede the call event.
-     */
-    private CompletableFuture<Runnable> startAttempt(int attempt) {
-      synchronized (this) {
-        if (finished.get() || handle.isCancelled()) {
-          throw cancelled(null);
-        }
-        attempts = attempt + 1;
-        return config.observers().isEmpty() ? null : reserveObserverSlot();
-      }
-    }
-
-    /**
-     * One attempt, owning the slot {@link #startAttempt} reserved: every exit fills it, including a
-     * failure while building the request (no exchange happened, so the event has no status), so a
-     * later terminal event is never stuck behind an empty slot.
-     */
-    private T attempt(int attempt, Duration budget, CompletableFuture<Runnable> slot) {
-      final long started = config.nanoTime().getAsLong();
-      int status = -1;
-      Throwable failure = null;
-      try {
-        HttpResponse<String> response = exchange(buildRequest(attempt, budget), budget);
-        status = response.statusCode();
-        lastStatus = status;
-        return handle(response, started);
-      } catch (Throwable t) {
-        failure = t;
-        throw t;
-      } finally {
-        observeAttempt(slot, attempt, started, status, failure);
-      }
-    }
-
-    private HttpResponse<String> exchange(HttpRequest request, Duration budget) {
-      CompletableFuture<HttpResponse<String>> exchange;
-      try {
-        exchange =
-            config
-                .httpClient()
-                .sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-      } catch (IllegalArgumentException e) {
-        throw new JevException("invalid request: " + e.getMessage(), e);
-      }
-      handle.inFlight(exchange);
-      HttpResponse<String> response;
-      try {
-        response = exchange.get(budget.toNanos(), TimeUnit.NANOSECONDS);
-      } catch (TimeoutException e) {
-        exchange.cancel(true);
-        log(Level.INFO, () -> spec.endpoint() + " timed out after " + budget.toMillis() + "ms");
-        throw new JevTimeoutException(
-            spec.endpoint() + ": attempt timed out after " + budget.toMillis() + " ms", e);
-      } catch (InterruptedException e) {
-        exchange.cancel(true);
-        Thread.currentThread().interrupt();
-        throw new JevInterruptedException(spec.endpoint() + ": interrupted", e);
-      } catch (CancellationException e) {
-        log(Level.INFO, () -> spec.endpoint() + " aborted by caller");
-        throw cancelled(e);
-      } catch (ExecutionException e) {
-        JevException failure = mapTransportFailure(e.getCause());
-        log(Level.INFO, () -> spec.endpoint() + " <- " + failure.getClass().getSimpleName());
-        throw failure;
-      } finally {
-        handle.clearInFlight();
-      }
-      checkCancelled();
-      return response;
-    }
-
-    private T handle(HttpResponse<String> response, long started) {
-      Map<String, List<String>> headers = response.headers().map();
-      String body = response.body();
-      long elapsedMs = (config.nanoTime().getAsLong() - started) / 1_000_000;
-      log(
-          Level.INFO,
-          () ->
-              spec.endpoint()
-                  + " -> "
-                  + response.statusCode()
-                  + " in "
-                  + elapsedMs
-                  + " ms request_id="
-                  + firstHeader(headers, "x-typesafe-request-id").orElse("-"));
-      log(Level.DEBUG, () -> "<- headers " + Redaction.headers(headers) + " body " + body);
-      int status = response.statusCode();
-      if (status >= 200 && status < 300) {
-        return spec.parser().parse(status, headers, body, spec.endpoint());
-      }
-      throw JevApiException.fromStatus(status, headers, body, spec.endpoint());
-    }
-
-    private HttpRequest buildRequest(int attempt, Duration budget) {
-      final HttpRequest.Builder builder = HttpRequest.newBuilder(spec.uri()).timeout(budget);
-      Map<String, String> headers = new TreeMap<>(String.CASE_INSENSITIVE_ORDER);
-      headers.putAll(config.defaultHeaders());
-      headers.putAll(options.headers());
-      headers.keySet().removeIf(name -> PROTECTED.contains(name.toLowerCase(Locale.ROOT)));
-      headers.put("Authorization", "Bearer " + config.apiKey());
-      headers.put("Accept", "application/json");
-      headers.put("User-Agent", Version.SDK);
-      headers.put("X-TypeSafe-SDK", Version.SDK);
-      headers.put("X-TypeSafe-Runtime", Version.RUNTIME);
-      if (attempt > 0) {
-        headers.put(RETRY_COUNT_HEADER, Integer.toString(attempt));
-      }
-      if (spec.body().isPresent()) {
-        headers.put("Content-Type", "application/json");
-        builder.method(spec.method(), HttpRequest.BodyPublishers.ofString(spec.body().get()));
-      } else {
-        builder.method(spec.method(), HttpRequest.BodyPublishers.noBody());
-      }
-      try {
-        headers.forEach(builder::header);
-      } catch (IllegalArgumentException e) {
-        throw new JevException("invalid request header: " + e.getMessage(), e);
-      }
-      log(
-          Level.DEBUG,
-          () ->
-              "-> "
-                  + spec.endpoint()
-                  + " headers "
-                  + Redaction.headers(headers)
-                  + " body "
-                  + spec.body().orElse(""));
-      return builder.build();
-    }
-
-    private void sleep(Duration delay) {
-      try {
-        if (!config.sleeper().sleep(delay, handle)) {
-          throw cancelled(null);
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new JevInterruptedException(spec.endpoint() + ": interrupted during backoff", e);
-      }
-    }
-
-    private void checkCancelled() {
-      if (handle.isCancelled()) {
-        throw cancelled(null);
-      }
-    }
-
-    private CancellationException cancelled(Throwable cause) {
-      CancellationException e = new CancellationException(spec.endpoint() + ": call cancelled");
-      if (cause != null) {
-        e.initCause(cause);
-      }
-      return e;
-    }
-
-    private JevDeadlineExceededException deadlineExceeded(int attempts, JevException last) {
-      return new JevDeadlineExceededException(
-          spec.endpoint()
-              + ": operation deadline of "
-              + deadline.map(Duration::toMillis).orElse(0L)
-              + " ms exceeded after "
-              + attempts
-              + " attempt(s)",
-          last);
-    }
-
-    /** Class and status only: exception messages can embed server body text. */
-    private static String describe(JevException e) {
-      return e instanceof JevApiException api
-          ? e.getClass().getSimpleName() + " status=" + api.status()
-          : e.getClass().getSimpleName();
-    }
-
-    private JevException mapTransportFailure(Throwable cause) {
-      if (cause instanceof CompletionException && cause.getCause() != null) {
-        cause = cause.getCause();
-      }
-      if (cause instanceof HttpConnectTimeoutException || cause instanceof HttpTimeoutException) {
-        return new JevTimeoutException(spec.endpoint() + ": " + cause.getMessage(), cause);
-      }
-      if (cause instanceof IOException) {
-        return new JevConnectionException(spec.endpoint() + ": " + cause.getMessage(), cause);
-      }
-      if (cause instanceof JevException jev) {
-        return jev;
-      }
-      return new JevConnectionException(spec.endpoint() + ": " + cause, cause);
-    }
-
-    private Optional<Duration> serverDelay(JevException e) {
-      if (e instanceof JevRateLimitException limited) {
-        return limited.retryAfter();
-      }
-      if (e instanceof JevApiException api) {
-        return RetryAfter.parse(api.headers());
-      }
-      return Optional.empty();
-    }
-  }
-
-  // ---------------------------------------------------------------------------------------------
-  // Helpers
-  // ---------------------------------------------------------------------------------------------
-
-  /** Logs through this client's diagnostic sink (its configured level applies). */
-  private void log(Level level, Supplier<String> message) {
-    diagnostics.log(level, message);
-  }
-
-  private static Optional<String> firstHeader(Map<String, List<String>> headers, String name) {
-    for (Map.Entry<String, List<String>> e : headers.entrySet()) {
-      if (name.equalsIgnoreCase(e.getKey()) && !e.getValue().isEmpty()) {
-        return Optional.of(e.getValue().get(0));
-      }
-    }
-    return Optional.empty();
-  }
-
-  private static Duration min(Duration a, Duration b) {
-    return a.compareTo(b) <= 0 ? a : b;
   }
 }

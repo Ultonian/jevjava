@@ -49,16 +49,21 @@ public final class RecordingJevClient implements JevClient {
    */
   static final Duration PUBLICATION_WAIT = Duration.ofSeconds(5);
 
+  // Script selection is independent of lifecycle admission; responders run outside both locks.
   private final Deque<Function<SystemOneRequest, SystemOneResponse>> script = new ArrayDeque<>();
-  private final List<RecordedCall> calls = new CopyOnWriteArrayList<>();
-  private final Set<CompletableFuture<?>> inFlight = ConcurrentHashMap.newKeySet();
-  private final Clock clock;
-  private final Executor executor;
-  private final Object lifecycle = new Object();
-  private boolean closed; // guarded by lifecycle
   private volatile Function<SystemOneRequest, SystemOneResponse> defaultResponder =
       request -> ScriptedAnswers.neutralResponse(request.questions());
   private volatile ModelList models = defaultModels();
+
+  // Readers receive immutable snapshots; timestamps are captured before taking lifecycle.
+  private final List<RecordedCall> calls = new CopyOnWriteArrayList<>();
+  private final Clock clock;
+
+  // The lifecycle lock orders admission, history recording, and async registration against close.
+  private final Object lifecycle = new Object();
+  private boolean closed; // guarded by lifecycle
+  private final Set<CompletableFuture<?>> inFlight = ConcurrentHashMap.newKeySet();
+  private final Executor executor;
 
   /** A client that records with the system clock and runs async calls on virtual threads. */
   public RecordingJevClient() {
@@ -185,7 +190,7 @@ public final class RecordingJevClient implements JevClient {
     CompletableFuture<SystemOneResponse> future = new CompletableFuture<>();
     Function<SystemOneRequest, SystemOneResponse> responder =
         admitSystemOne(request, options, future);
-    return runAsync(future, () -> responder.apply(request));
+    return executeAndPublish(future, () -> responder.apply(request));
   }
 
   @Override
@@ -201,7 +206,7 @@ public final class RecordingJevClient implements JevClient {
     CompletableFuture<ModelList> future = new CompletableFuture<>();
     admit(new RecordedCall("models", Optional.empty(), options, clock.instant()), future);
     ModelList current = models;
-    return runAsync(future, () -> current);
+    return executeAndPublish(future, () -> current);
   }
 
   /**
@@ -220,22 +225,7 @@ public final class RecordingJevClient implements JevClient {
     for (CompletableFuture<?> f : outstanding) {
       publish(f, () -> f.completeExceptionally(new CancellationException("client closed")));
     }
-    long until = System.nanoTime() + PUBLICATION_WAIT.toNanos();
-    for (CompletableFuture<?> f : outstanding) {
-      while (!f.isDone()) {
-        if (System.nanoTime() >= until) {
-          throw new JevException(
-              "close(): a result was still unpublished after " + PUBLICATION_WAIT);
-        }
-        // Park rather than spin: a spinning virtual thread would keep its carrier and could starve
-        // the very publication threads it is waiting for.
-        LockSupport.parkNanos(1_000_000L);
-        if (Thread.interrupted()) {
-          Thread.currentThread().interrupt();
-          throw new JevException("close(): interrupted while waiting for publication");
-        }
-      }
-    }
+    awaitPublication(outstanding);
   }
 
   /** Whether {@link #close()} has been called. */
@@ -244,6 +234,8 @@ public final class RecordingJevClient implements JevClient {
       return closed;
     }
   }
+
+  // Admission and execution helpers: caller code and completion always run outside locks.
 
   private Function<SystemOneRequest, SystemOneResponse> admitSystemOne(
       SystemOneRequest request, RequestOptions options, CompletableFuture<?> future) {
@@ -271,7 +263,8 @@ public final class RecordingJevClient implements JevClient {
     }
   }
 
-  private <T> CompletableFuture<T> runAsync(CompletableFuture<T> future, Supplier<T> work) {
+  private <T> CompletableFuture<T> executeAndPublish(
+      CompletableFuture<T> future, Supplier<T> work) {
     try {
       executor.execute(
           () -> {
@@ -293,7 +286,27 @@ public final class RecordingJevClient implements JevClient {
     return future;
   }
 
-  /** Publishes a completion on a fresh virtual thread: continuations never run on the caller. */
+  /** Waits for future state, never callback return; parking also works with one carrier. */
+  private static void awaitPublication(List<CompletableFuture<?>> outstanding) {
+    long until = System.nanoTime() + PUBLICATION_WAIT.toNanos();
+    for (CompletableFuture<?> f : outstanding) {
+      while (!f.isDone()) {
+        if (System.nanoTime() >= until) {
+          throw new JevException(
+              "close(): a result was still unpublished after " + PUBLICATION_WAIT);
+        }
+        // Park rather than spin: a spinning virtual thread would keep its carrier and could starve
+        // the very publication threads it is waiting for.
+        LockSupport.parkNanos(1_000_000L);
+        if (Thread.interrupted()) {
+          Thread.currentThread().interrupt();
+          throw new JevException("close(): interrupted while waiting for publication");
+        }
+      }
+    }
+  }
+
+  /** Publishes on a fresh virtual thread; callbacks follow CompletableFuture's execution rules. */
   private static void publish(CompletableFuture<?> future, Runnable completion) {
     if (future.isDone()) {
       return;
