@@ -67,7 +67,15 @@ A sorted `javap -protected -s` inventory of publicly declared classes across all
 
 A normalized comparison of 32 critical call, shutdown and request-specification method bodies confirmed their preservation after explicit renaming and delegation to the HTTP helper. Constructor dependency wiring, public execution entry points and registry release were reviewed separately. These checks complement the integration tests; examples still compile and execute unchanged.
 
-Authenticated live tests remain opt-in and were not run. Hosted CI, publication and Phase 4 release readiness remain separate from this local refactoring verification.
+Authenticated live tests remain opt-in and were not run. Hosted CI is tracked on the PR; publication and Phase 4 release readiness remain separate from this refactoring verification.
+
+## CI follow-up: callback-thread assertion
+
+The initial Java 21 CI run at `b03ab41` failed the shared contract's callback-thread assertion. The test called `get()` on the source result before inspecting the callback. A waiting `CompletableFuture.get()` can help process pending continuations, so the waiting platform thread could run that callback even though the SDK completed the source on a virtual thread. This follows standard [CompletableFuture execution rules](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html); the local Java 21 source confirms `timedGet` calls `postComplete` after observing completion.
+
+The original test reproduced the failure 10 times in 2,000 HTTP/fake cases on Java 21. It now waits on the dependent callback stage first and then reads the source result, preserving both assertions. Public documentation now distinguishes SDK publication from the threads that may execute non-async callbacks. Runtime implementation behavior is unchanged.
+
+After the fix, clean reactor verification passed on Java 21 and 25 (291 executed cases and four live skips each). The affected shared contract also passed 2,000 cases on each JDK with one virtual-thread carrier: 4,000 executions and zero failures.
 
 ## Reproduce the main gates
 

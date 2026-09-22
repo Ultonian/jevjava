@@ -306,7 +306,7 @@ public final class RecordingJevClient implements JevClient {
     }
   }
 
-  /** Publishes a completion on a fresh virtual thread: continuations never run on the caller. */
+  /** Publishes on a fresh virtual thread; callbacks follow CompletableFuture's execution rules. */
   private static void publish(CompletableFuture<?> future, Runnable completion) {
     if (future.isDone()) {
       return;

@@ -116,7 +116,7 @@ SystemOneResponse r = client.systemOne(request, options);
 
 ```java
 CompletableFuture<SystemOneResponse> future = client.systemOneAsync(state, questions);
-future.thenAccept(r -> route(r.answers()));      // callbacks run on an SDK virtual thread
+future.thenAccept(r -> route(r.answers()));      // standard CompletableFuture callback semantics
 future.cancel(true);                             // aborts the HTTP exchange and any backoff
 ```
 

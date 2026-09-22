@@ -58,8 +58,10 @@ class ClientContractTest {
       assertThat(result).isNotDone();
       CompletableFuture<Thread> callback = result.thenApply(r -> Thread.currentThread());
       f.startWork();
-      assertThat(result.get(5, TimeUnit.SECONDS).model()).isEqualTo(RESPONSE.model());
+      // Wait on the dependent stage first: get() on result can help run its callbacks on this
+      // waiting platform thread, even though the SDK publishes the result on a virtual thread.
       assertThat(callback.get(5, TimeUnit.SECONDS).isVirtual()).isTrue();
+      assertThat(result.get(5, TimeUnit.SECONDS).model()).isEqualTo(RESPONSE.model());
     }
   }
 
