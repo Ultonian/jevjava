@@ -13,6 +13,7 @@ target/
 # Local working documents (plan, review notes): not part of the published repository
 JEV_JAVA_SDK_PLAN*.md
 docs/PHASE_*_REVIEW*.md
+docs/REFACTORING_PLAN*.md
 
 # Local credentials: source it into the shell before running live tests (see README)
 .env
