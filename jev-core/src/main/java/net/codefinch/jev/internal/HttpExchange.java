@@ -92,6 +92,24 @@ final class HttpExchange {
     return response;
   }
 
+  /**
+   * Adds one header. The JDK's rejection of a value quotes the value, which may be a credential, so
+   * a rejected value is reported by header name only and the JDK exception is not chained. A
+   * rejected name is safe to report.
+   */
+  private static void header(HttpRequest.Builder builder, String name, String value) {
+    try {
+      builder.header(name, value);
+    } catch (IllegalArgumentException rejected) {
+      try {
+        HttpRequest.newBuilder().header(name, "");
+      } catch (IllegalArgumentException badName) {
+        throw new JevException("invalid request header: " + badName.getMessage(), badName);
+      }
+      throw new JevException("invalid value for request header " + name);
+    }
+  }
+
   private HttpRequest buildRequest(
       CallSpec<?> spec, RequestOptions options, int attempt, Duration budget) {
     final HttpRequest.Builder builder = HttpRequest.newBuilder(spec.uri()).timeout(budget);
@@ -113,11 +131,7 @@ final class HttpExchange {
     } else {
       builder.method(spec.method(), HttpRequest.BodyPublishers.noBody());
     }
-    try {
-      headers.forEach(builder::header);
-    } catch (IllegalArgumentException e) {
-      throw new JevException("invalid request header: " + e.getMessage(), e);
-    }
+    headers.forEach((name, value) -> header(builder, name, value));
     diagnostics.log(
         Level.DEBUG,
         () ->

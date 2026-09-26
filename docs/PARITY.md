@@ -13,17 +13,22 @@ Java behaviour differs from the named SDK on purpose.
 | Source | Version | Pin |
 |---|---|---|
 | JavaScript `@typesafe-ai/sdk` | 0.6.0 | `66880ccded6cb642dc1809620c2b108c33730214` |
-| Python `typesafe-sdk` | 0.7.0 | `2ce5c65f13646cab6e6f782328194c9d85f3300a` |
+| Python `typesafe-sdk` | 0.7.1 | `0ffd094c72ed9445223060b24ffd7a56aa781fb4` |
 | OpenAPI | `info.version` 0.2.0 | [`upstream/openapi-0.2.0-2026-09-20.json`](upstream/openapi-0.2.0-2026-09-20.json) |
 | Docs | 20 Sep 2026 | https://docs.typesafe.ai (`.md` suffix for Markdown) |
 | Rust port parity audit | `gilljon/typesafe-ai-rs` @ `06f5220` | `docs/PARITY.md` there (audits Python 0.6.0 / JS 0.6.0) |
+
+Re-checked 26 Sep 2026: JavaScript has no release after 0.6.0 and the OpenAPI document is
+byte-identical to the pinned copy. Python 0.7.0→0.7.1 (21 Sep) changes only API-key handling:
+the key is stripped and validated when the client is built, and credentials are redacted from
+transport exceptions. Both are adopted below; every other row is unchanged from 0.7.0.
 
 Kinds: `serialization`, `client-validation`, `server-limit`, `transport`, `error-mapping`, `config`.
 Tests are in `jev-core/src/test/java`. A row is ticked (`[x]`) only when its test exists and passes.
 
 ## Wire types and serialisation (Phase 1)
 
-| | Behaviour | API (OpenAPI/docs) | Python 0.7.0 | JavaScript 0.6.0 | Java decision | Kind | Test |
+| | Behaviour | API (OpenAPI/docs) | Python 0.7.1 | JavaScript 0.6.0 | Java decision | Kind | Test |
 |---|---|---|---|---|---|---|---|
 | [x] | Content positions accept text, object, array | `string \| object \| array` (+`null` where noted) | `JSONContent` | `EntryType` | `Content` sealed: `Text`, `JsonObject`, `JsonArray`, `Null` | serialization | `ContentTest.textObjectArrayNullAreTheFourKinds` |
 | [x] | Top-level number/boolean as content | not in schema | not in type | not in type | rejected (`IllegalArgumentException`); nested kept | client-validation | `ContentTest.topLevelNumberAndBooleanAreRejectedButNestedOnesKept` |
@@ -58,7 +63,7 @@ Tests are in `jev-core/src/test/java`. A row is ticked (`[x]`) only when its tes
 
 ## Client-side validation vs server limits
 
-| | Behaviour | API | Python 0.7.0 | JavaScript 0.6.0 | Java decision | Kind | Test |
+| | Behaviour | API | Python 0.7.1 | JavaScript 0.6.0 | Java decision | Kind | Test |
 |---|---|---|---|---|---|---|---|
 | [x] | At least one question | `questions.minProperties: 1` | throws | throws | `= all`: `Questions.build()` throws | client-validation | `QuestionsTest.emptySetIsRejectedLikeBothUpstreamSdks` |
 | [x] | Question ids unique and non-blank | object keys | dict keys | object keys | duplicate / blank id throws | client-validation | `QuestionsTest.idsMustBeUniqueAndNonBlank` |
@@ -73,7 +78,7 @@ Tests are in `jev-core/src/test/java`. A row is ticked (`[x]`) only when its tes
 
 ## Errors (Phase 1: mapping and messages; Phase 2: transport)
 
-| | Behaviour | API/docs | Python 0.7.0 | JavaScript 0.6.0 | Java decision | Kind | Test |
+| | Behaviour | API/docs | Python 0.7.1 | JavaScript 0.6.0 | Java decision | Kind | Test |
 |---|---|---|---|---|---|---|---|
 | [x] | 400 / 401 / 403 / 404 / 422 / 429 | documented statuses | `TypeSafe{BadRequest,Authentication,PermissionDenied,NotFound,UnprocessableEntity,RateLimit}Error` | same names without prefix | `Jev…Exception` with the same stems | error-mapping | `JevApiExceptionTest.statusMapsToTheUpstreamClass` |
 | [x] | Any 5xx incl. 529 | 529 = overloaded (docs) | `TypeSafeInternalServerError` (≥500) | `InternalServerError` (≥500) | `JevInternalServerException` + `isOverloaded()`; **no** `JevOverloadedException` | error-mapping | `JevApiExceptionTest.rateLimitExposesRetryAfterAndServerErrorKnowsOverloaded` |
@@ -91,11 +96,14 @@ Tests are in `jev-core/src/test/java`. A row is ticked (`[x]`) only when its tes
 
 ## Configuration, headers, retries and lifecycle (Phase 2)
 
-| | Behaviour | API/docs | Python 0.7.0 | JavaScript 0.6.0 | Java decision | Kind | Test |
+| | Behaviour | API/docs | Python 0.7.1 | JavaScript 0.6.0 | Java decision | Kind | Test |
 |---|---|---|---|---|---|---|---|
 | [x] | Env vars | — | `TYPESAFE_API_KEY`, `TYPESAFE_BASE_URL`, `TYPESAFE_DEFAULT_MODEL`, `TYPESAFE_LOG_LEVEL`; trimmed, blank = unset | same | same | config | `JevClientBuilderTest.environmentIsTrimmedAndBlankMeansUnset`, `logLevelNamesFromTheEnvironment` |
 | [x] | Explicit config beats env beats defaults | — | yes | yes | yes | config | `JevClientBuilderTest.explicitValuesBeatTheEnvironment`, `defaultsWhenOnlyTheKeyIsSet` |
 | [x] | Missing key | — | error names `TYPESAFE_API_KEY` | same | same message | config | `JevClientBuilderTest.missingKeyNamesTheVariable` |
+| [x] | API key normalisation | — | explicit or env key stripped; an explicit key is used even when invalid (no env fall-back); empty after stripping = missing | explicit key used as-is, env trimmed | same as Python | config | `JevClientBuilderTest.apiKeyWhitespaceIsStripped`, `invalidExplicitKeyDoesNotFallBackToTheEnvironment` |
+| [x] | API key validation | — | internal whitespace, control or non-ASCII characters rejected at construction; message never contains the key | not validated | same as Python (printable ASCII U+0021–U+007E only) | config | `JevClientBuilderTest.invalidApiKeyIsRejectedWithoutEchoingIt` |
+| [x] | Credentials in transport errors | — | credential header values redacted from connection-error messages; unredacted original dropped from the chain | not redacted | the JDK quotes a rejected header value, so the error names the header only and does not chain the JDK exception | transport | `HttpRequestTest.invalidHeaderValueIsReportedWithoutEchoingIt` |
 | [x] | Defaults | — | base `https://api.typesafe.ai`, model `jev-latest`, timeout 10 s | same | same; deadline 30 s (Java-only); trailing slashes stripped from base URL; path prefix kept | config | `JevClientBuilderTest.defaultsWhenOnlyTheKeyIsSet`, `HttpJevClientTest.baseUrlPrefixAndTrailingSlashesAreHandled` |
 | [x] | Identification headers | — | `User-Agent`/`X-TypeSafe-SDK: typesafe-sdk/<v>`, `X-TypeSafe-Runtime: python/… (os; arch)` | same with `node/…` | `jev-java/<v>` and `java/<Runtime.version()> (<os.name>; <os.arch>)` | transport | `HttpJevClientTest.systemOneSendsTheDocumentedRequestAndParsesTheResponse` |
 | [x] | `Authorization: Bearer`, `Accept: application/json`, `Content-Type` on bodies only | schema | yes | yes | yes | transport | `HttpJevClientTest.systemOneSends…`, `modelsSendsGetWithoutBodyOrContentType` |

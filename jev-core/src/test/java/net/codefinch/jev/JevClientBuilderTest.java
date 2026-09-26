@@ -11,6 +11,9 @@ import java.util.Map;
 import net.codefinch.jev.internal.ClientConfig;
 import net.codefinch.jev.internal.HttpJevClient;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.ValueSource;
 
 class JevClientBuilderTest {
 
@@ -125,6 +128,70 @@ class JevClientBuilderTest {
                 + " variable.");
     assertThatThrownBy(() -> build(Map.of("TYPESAFE_API_KEY", "  "), b -> b))
         .isInstanceOf(JevException.class);
+  }
+
+  /** Python 0.7.1: surrounding whitespace is stripped from the key wherever it comes from. */
+  @ParameterizedTest(name = "{0} padding {1}")
+  @CsvSource({
+    "env,none", "env,lf", "env,crlf", "env,mixed",
+    "explicit,none", "explicit,lf", "explicit,crlf", "explicit,mixed"
+  })
+  void apiKeyWhitespaceIsStripped(String source, String paddingName) {
+    String padding =
+        switch (paddingName) {
+          case "lf" -> "\n";
+          case "crlf" -> "\r\n";
+          case "mixed" -> " \t\r\n ";
+          default -> "";
+        };
+    String key = padding + "test-key" + padding;
+    Map<String, String> env = Map.of("TYPESAFE_API_KEY", source.equals("env") ? key : "env-key");
+    ClientConfig c = build(env, b -> source.equals("env") ? b : b.apiKey(key));
+    assertThat(c.apiKey()).isEqualTo("test-key");
+  }
+
+  /** Python 0.7.1: an explicit key that is invalid is an error, never a fall-back to the env. */
+  @ParameterizedTest
+  @ValueSource(strings = {"", " \t\r\n ", "\u0000private", "private\u0000"})
+  void invalidExplicitKeyDoesNotFallBackToTheEnvironment(String key) {
+    Map<String, String> env = Map.of("TYPESAFE_API_KEY", "env-key");
+    assertThatThrownBy(() -> build(env, b -> b.apiKey(key)))
+        .isInstanceOf(JevException.class)
+        .hasMessageContaining("API key");
+  }
+
+  /**
+   * Python 0.7.1: a key with internal whitespace, control or non-ASCII characters is rejected when
+   * the client is built, and the error never contains the key (message, causes or stack trace).
+   */
+  @ParameterizedTest(name = "{0} U+{1}")
+  @CsvSource({
+    "env,000A",
+    "env,000D",
+    "env,0009",
+    "env,001F",
+    "env,007F",
+    "env,0020",
+    "env,00E9",
+    "env,200B",
+    "explicit,000A",
+    "explicit,000D",
+    "explicit,0009",
+    "explicit,001F",
+    "explicit,007F",
+    "explicit,0020",
+    "explicit,00E9",
+    "explicit,200B"
+  })
+  void invalidApiKeyIsRejectedWithoutEchoingIt(String source, String codePoint) {
+    String credential = "ts_live_private";
+    String key = credential + Character.toString(Integer.parseInt(codePoint, 16)) + "suffix";
+    Map<String, String> env = Map.of("TYPESAFE_API_KEY", source.equals("env") ? key : "env-key");
+    Throwable error =
+        org.assertj.core.api.Assertions.catchThrowable(
+            () -> build(env, b -> source.equals("env") ? b : b.apiKey(key)));
+    assertThat(error).isInstanceOf(JevException.class).hasMessageContaining("API key");
+    assertThat(Fixtures.render(error)).doesNotContain(credential);
   }
 
   @Test

@@ -3,9 +3,19 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.0, OpenAPI `info.version` 0.2.0.
+Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenAPI `info.version` 0.2.0.
 
 ## [Unreleased]
+
+### Security (Python 0.7.1 parity)
+- The API key is stripped of surrounding whitespace and validated when the client is built: an
+  empty key, or one with internal whitespace, control or non-ASCII characters, throws
+  `JevException` without the key in the message. An explicit invalid key no longer falls back to
+  `TYPESAFE_API_KEY`. Previously a key with a stray newline reached the request, where the JDK's
+  error quoted the whole `Authorization` value into the exception.
+- An invalid request header value is reported by header name only; the JDK exception that quotes
+  the value is no longer chained.
+- Tracks Python `typesafe-sdk` 0.7.1 (JavaScript and OpenAPI unchanged).
 
 ### Changed (readability refactor)
 - Split HTTP client responsibilities between `HttpJevClient` (admission and shutdown),

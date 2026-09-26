@@ -116,6 +116,33 @@ class HttpRequestTest {
     assertThat(req.header("X-TypeSafe-Retry-Count")).isNull();
   }
 
+  /**
+   * The JDK's rejection of a header value quotes the value, which may be a credential (Python 0.7.1
+   * redacts the equivalent httpx error). The SDK's exception names the header only and does not
+   * chain the JDK's exception.
+   */
+  @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"client", "request"})
+  void invalidHeaderValueIsReportedWithoutEchoingIt(String where) {
+    String secret = "ts_live_private\nsuffix";
+    JevClientBuilder builder = client();
+    RequestOptions options = RequestOptions.NONE;
+    if (where.equals("client")) {
+      builder.defaultHeader("X-Gateway-Token", secret);
+    } else {
+      options = RequestOptions.builder().header("X-Gateway-Token", secret).build();
+    }
+    RequestOptions call = options;
+    try (JevClient c = builder.build()) {
+      Throwable error = org.assertj.core.api.Assertions.catchThrowable(() -> c.models(call));
+      assertThat(error)
+          .isInstanceOf(JevException.class)
+          .hasMessageContaining("invalid value for request header X-Gateway-Token");
+      assertThat(Fixtures.render(error)).doesNotContain("ts_live_private");
+    }
+    assertThat(server.requests()).isEmpty();
+  }
+
   @Test
   void perCallModelOverridesAndConcurrentCallsUseTheirOwnModel() throws Exception {
     server.enqueueJson(200, OK).enqueueJson(200, OK);

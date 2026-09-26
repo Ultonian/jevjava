@@ -84,7 +84,11 @@ public final class JevClientBuilder {
 
   JevClientBuilder() {}
 
-  /** The API key; otherwise {@code TYPESAFE_API_KEY}. */
+  /**
+   * The API key; otherwise {@code TYPESAFE_API_KEY}. Surrounding whitespace is stripped; {@link
+   * #build()} rejects a key containing other whitespace, control or non-ASCII characters. An
+   * explicit key is used even if invalid, never replaced by the environment.
+   */
   public JevClientBuilder apiKey(String apiKey) {
     this.apiKey = Objects.requireNonNull(apiKey, "apiKey");
     return this;
@@ -226,13 +230,7 @@ public final class JevClientBuilder {
 
   /** Resolves the configuration and creates the client. */
   public JevClient build() {
-    String key = apiKey != null ? apiKey : fromEnv(API_KEY_ENV);
-    if (key == null || key.isBlank()) {
-      throw new JevException(
-          "No API key was provided. Pass apiKey or set the "
-              + API_KEY_ENV
-              + " environment variable.");
-    }
+    final String key = resolveApiKey();
     final URI base =
         baseUrl != null
             ? baseUrl
@@ -289,6 +287,27 @@ public final class JevClientBuilder {
             delivery,
             observers);
     return new HttpJevClient(config);
+  }
+
+  /**
+   * Python 0.7.1's rule: an explicit key wins (even when invalid), surrounding whitespace is
+   * stripped, and anything but printable ASCII without spaces is rejected here, before a header
+   * built from it could quote it in an exception. The key never appears in the message.
+   */
+  private String resolveApiKey() {
+    String raw = apiKey != null ? apiKey : fromEnv(API_KEY_ENV);
+    String key = raw == null ? "" : raw.strip();
+    if (key.isEmpty()) {
+      throw new JevException(
+          "No API key was provided. Pass apiKey or set the "
+              + API_KEY_ENV
+              + " environment variable.");
+    }
+    if (!key.chars().allMatch(ch -> ch > ' ' && ch < 0x7f)) {
+      throw new JevException(
+          "API key must contain only printable ASCII characters without whitespace.");
+    }
+    return key;
   }
 
   private String fromEnv(String name) {

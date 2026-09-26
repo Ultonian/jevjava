@@ -15,6 +15,13 @@ public final class Fixtures {
 
   private Fixtures() {}
 
+  /** The throwable as a log would show it: messages, causes, suppressed and stack traces. */
+  public static String render(Throwable t) {
+    java.io.StringWriter out = new java.io.StringWriter();
+    t.printStackTrace(new java.io.PrintWriter(out));
+    return out.toString();
+  }
+
   public static String read(String name) {
     try (InputStream in = Fixtures.class.getResourceAsStream("/fixtures/" + name)) {
       if (in == null) {
