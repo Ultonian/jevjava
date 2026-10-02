@@ -1,0 +1,6 @@
+{
+  "sourceCommit": "5ab607c",
+  "sourcePath": "jev-core/src/test/resources/fixtures/responses/docs-all-three.json",
+  "sourceSha256": "232380c3f126d6c2c1d1f54828da95c0a09d3485dc0d02909f50a75650ff2b48",
+  "description": "Verbatim response fixture derived from TypeSafe documentation; see docs/upstream/README.md. Generated request questions and structured ticket data adapt TicketTriage at the same commit. Synthetic size/count expansions are not service limits. No random generation."
+}

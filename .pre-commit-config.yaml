@@ -19,6 +19,12 @@ repos:
         exclude: ^mvnw\.cmd$
   - repo: local
     hooks:
+      - id: benchmark-study-tests
+        name: benchmark study script checks (no timed workloads)
+        entry: python -B -m unittest discover -s jev-benchmarks/scripts -v
+        language: python
+        pass_filenames: false
+        files: ^jev-benchmarks/scripts/.*\.py$
       - id: maven-verify
         name: mvn verify (spotless, checkstyle, tests, jacoco, javadoc, spotbugs)
         entry: ./mvnw --batch-mode --quiet --no-transfer-progress verify

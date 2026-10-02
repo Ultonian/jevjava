@@ -13,6 +13,7 @@ how each behaviour compares with the official Python and JavaScript SDKs and the
 | `jev-micrometer` | `jev-core`, Micrometer | `JevMetrics`, a `CallObserver` recording timers, token counters and allowlisted confidence summaries |
 | `jev-test` | `jev-core` | `RecordingJevClient`, an in-memory `JevClient` with scripted answers and recorded requests (use with `test` scope) |
 | `jev-examples` | — | eight runnable examples mirroring the docs; not published |
+| [`jev-benchmarks`](jev-benchmarks/README.md) | `jev-core`, `jev-micrometer`, JMH, HdrHistogram | component, loopback HTTP and in-memory transport benchmarks; run manually; not published |
 
 ## Usage
 

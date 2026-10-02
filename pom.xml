@@ -32,6 +32,7 @@
     <module>jev-test</module>
     <module>jev-micrometer</module>
     <module>jev-examples</module>
+    <module>jev-benchmarks</module>
   </modules>
 
   <scm>

@@ -1,4 +1,7 @@
 target/
+# Local benchmark runs, recordings, runtime downloads and notes survive Maven clean.
+jev-benchmarks/results/
+jev-benchmarks/scripts/__pycache__/
 .mvn/wrapper/maven-wrapper.jar
 *.class
 *.log
@@ -14,6 +17,8 @@ target/
 JEV_JAVA_SDK_PLAN*.md
 docs/PHASE_*_REVIEW*.md
 docs/REFACTORING_PLAN*.md
+docs/BENCHMARKING_PLAN*.md
+docs/benchmarks/
 
 # Local credentials: source it into the shell before running live tests (see README)
 .env

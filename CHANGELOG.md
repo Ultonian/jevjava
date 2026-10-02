@@ -7,6 +7,13 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
 
 ## [Unreleased]
 
+### Added
+- [`jev-benchmarks`](jev-benchmarks/README.md): an unpublished, manually run benchmark module
+  for component timing/allocation, local HTTP workloads and synthetic in-memory transport.
+- Reproducible fixtures, recorded runtime/source identities, raw results and summaries, plus
+  restricted JFR diagnostics and optional scripts for repeated studies and runtime comparisons.
+  Runs need no live API credentials; CI checks the harness without running timed benchmarks.
+
 ### Security (Python 0.7.1 parity)
 - The API key is stripped of surrounding whitespace and validated when the client is built: an
   empty key, or one with internal whitespace, control or non-ASCII characters, throws

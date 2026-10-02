@@ -1,6 +1,8 @@
 # Internal architecture
 
-The SDK retains four modules: `jev-core` implements the public API and transport, `jev-test` supplies scripted/recording clients, `jev-micrometer` adapts observations to metrics, and `jev-examples` exercises consumer usage. Java 21 is the minimum runtime; verification also runs on Java 25.
+The four SDK/example modules are `jev-core` (public API and transport), `jev-test` (scripted/recording clients), `jev-micrometer` (metrics observations), and `jev-examples` (consumer usage). Java 21 is the minimum runtime; verification also runs on Java 25.
+
+The reactor also builds [`jev-benchmarks`](../jev-benchmarks/README.md), an unpublished developer tool for component, loopback HTTP and in-memory transport measurements. Timed runs require explicit invocation. Its dependencies do not flow back into the SDK modules; its workloads, controls and diagnostics remain outside production code.
 
 ## Ownership
 
