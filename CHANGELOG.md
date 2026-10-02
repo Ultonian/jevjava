@@ -7,6 +7,20 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
 
 ## [Unreleased]
 
+### Security
+- Update Jackson to 2.22.3, addressing CVE-2026-89407, CVE-2026-89425, CVE-2026-91776
+  and CVE-2026-91777.
+- Run Trivy before every commit with the same HIGH/CRITICAL policy as CI, excluding generated
+  output and local credentials. Vulnerability databases are cached with automatic refresh;
+  CI pins Trivy 0.75.0.
+
+### Changed
+- Refresh stable test/build dependencies, the Maven distribution, pre-commit hooks and pinned
+  GitHub Actions. Adopt JUnit 6 and current Checkstyle/Google Java Format while retaining Java 21
+  as the SDK's minimum runtime.
+- Keep Google Java Format at 1.36.1: 1.37.0 removed `Style.valueOf`, which the latest
+  Spotless 3.10.3 still requires.
+
 ### Added
 - [`jev-benchmarks`](jev-benchmarks/README.md): an unpublished, manually run benchmark module
   for component timing/allocation, local HTTP workloads and synthetic in-memory transport.

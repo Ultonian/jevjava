@@ -17,8 +17,8 @@ jobs:
       matrix:
         java: ["21", "25"]
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
         with:
           distribution: temurin
           java-version: ${{ matrix.java }}
@@ -26,7 +26,7 @@ jobs:
       - name: Cache the Maven wrapper distribution
         # setup-java caches ~/.m2/repository only; the wrapper downloads Maven itself into
         # ~/.m2/wrapper, and a transient fetch failure there failed a job once.
-        uses: actions/cache@v4
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.m2/wrapper
           key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
@@ -34,7 +34,7 @@ jobs:
         run: ./mvnw --batch-mode --no-transfer-progress verify
       - name: Upload JaCoCo report
         if: matrix.java == '21'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: jacoco-report
           path: "**/target/site/jacoco/"
@@ -44,24 +44,23 @@ jobs:
     name: pre-commit hooks (non-Maven)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.x"
-      - run: pipx install pre-commit
-      - run: SKIP=maven-verify pre-commit run --all-files
+      - run: pipx install pre-commit==4.6.2
+      # Dedicated jobs run Maven and Trivy; local commits run both hooks.
+      - run: SKIP=maven-verify,trivy pre-commit run --all-files
 
   trivy:
     name: Trivy (dependencies and config)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Scan repository
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8 # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
+          version: v0.75.0
           scan-type: fs
           scan-ref: .
-          scanners: vuln,misconfig,secret
-          severity: CRITICAL,HIGH
-          exit-code: "1"
-          ignore-unfixed: true
+          trivy-config: trivy.yaml

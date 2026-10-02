@@ -26,7 +26,7 @@ public final class LoadTrial {
       throw new IllegalArgumentException(
           "Use RunLoad: TCP_NODELAY and a 512-connection cap are required");
     }
-    Path output = Path.of(args[1]);
+    final Path output = Path.of(args[1]);
     JsonNode config = Json.parse(Files.readString(Path.of(args[0])));
     LoadCase cell =
         new LoadCase(
@@ -46,9 +46,9 @@ public final class LoadTrial {
         .contains(mode)) {
       throw new IllegalArgumentException("Invalid mode");
     }
-    boolean diagnostic = mode.equals("diagnostic") || mode.equals("diagnostic-long");
-    Duration warmup = warmup(mode);
-    Duration measurement = measurement(mode);
+    final boolean diagnostic = mode.equals("diagnostic") || mode.equals("diagnostic-long");
+    final Duration warmup = warmup(mode);
+    final Duration measurement = measurement(mode);
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("cell", cell);
     result.put("mode", mode);

@@ -1,0 +1,22 @@
+# Shared by pre-commit and CI. Database refresh stays enabled; Trivy reuses its local cache.
+exit-code: 1
+severity:
+  - HIGH
+  - CRITICAL
+timeout: 5m
+scan:
+  scanners:
+    - vuln
+    - misconfig
+    - secret
+  skip-dirs:
+    - .git
+    - .cache
+    - "**/target"
+    - jev-benchmarks/results
+  skip-files:
+    # Local credentials are intentionally outside the source scan.
+    - .env
+    - .env.*
+vulnerability:
+  ignore-unfixed: true

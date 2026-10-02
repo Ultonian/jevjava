@@ -208,10 +208,25 @@ run against the live API with `TYPESAFE_API_KEY`, otherwise against a scripted f
 
 ## Building
 
+Use JDK 21+ and install [Trivy 0.75.0](https://github.com/aquasecurity/trivy/releases/tag/v0.75.0)
+on your `PATH`, plus `pre-commit` 4.6.2 (`pipx install pre-commit==4.6.2`).
+The Maven wrapper downloads the pinned Maven version.
+
 ```sh
 ./mvnw verify          # compile (-Werror), Checkstyle, tests, JaCoCo >= 85 % on core, SpotBugs
-pre-commit install --install-hooks   # once per clone; runs the same gate before every commit
+pre-commit install --install-hooks   # once per clone
+pre-commit run --all-files           # Maven, Trivy and repository checks
+trivy fs --config trivy.yaml .       # run the security scan separately
 ```
+
+Pre-commit runs Trivy on every commit, using the same [scan policy](trivy.yaml) as CI: fail on
+HIGH/CRITICAL vulnerabilities with available fixes, misconfigurations and secrets. It excludes
+generated `target/` directories, benchmark archives and local `.env` files. Trivy's POM scanner
+covers compile/runtime dependencies; Maven plugins and test-scope dependencies are outside that
+scan. Trivy must be installed; a missing binary or failed scan blocks the commit.
+The first scan downloads its database; later scans reuse the cache and refresh it when needed,
+so network access is still required for refreshes and uncached Maven metadata. CI runs Trivy in
+its own job rather than duplicating it in the pre-commit job.
 
 The gate needs no credentials. To also run the live probes, copy `.env.example` to `.env`
 (git-ignored), add your key, and source it into the shell first:

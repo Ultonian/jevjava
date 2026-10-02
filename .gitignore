@@ -1,4 +1,6 @@
 target/
+# Trivy's GitHub Action uses this local database cache.
+.cache/trivy/
 # Local benchmark runs, recordings, runtime downloads and notes survive Maven clean.
 jev-benchmarks/results/
 jev-benchmarks/scripts/__pycache__/

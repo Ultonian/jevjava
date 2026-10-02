@@ -2,7 +2,7 @@
 # The Maven step is the same gate CI runs (compile with -Werror, Checkstyle, tests, JaCoCo >=85%, SpotBugs).
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v5.0.0
+    rev: v6.0.0
     hooks:
       - id: trailing-whitespace
         exclude: ^docs/upstream/.*\.json$
@@ -19,6 +19,13 @@ repos:
         exclude: ^mvnw\.cmd$
   - repo: local
     hooks:
+      - id: trivy
+        name: trivy (HIGH/CRITICAL vulnerabilities, config, secrets)
+        entry: trivy fs --config trivy.yaml .
+        language: system
+        pass_filenames: false
+        # Scan every commit: vulnerability advisories change independently of source files.
+        always_run: true
       - id: benchmark-study-tests
         name: benchmark study script checks (no timed workloads)
         entry: python -B -m unittest discover -s jev-benchmarks/scripts -v
