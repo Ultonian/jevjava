@@ -15,6 +15,8 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Run CI's Trivy scan after the Maven builds and restore their dependency cache, with a reactor
+  install fallback when the cache is unavailable, to avoid repeated uncached Maven Central lookups.
 - Rename the project to `jevjavauosdk` (Jev Java Unofficial SDK), clarify its independent status
   in documentation and Maven metadata, and identify requests as `jevjavauosdk/<version>` in
   `User-Agent` and `X-TypeSafe-SDK`. Maven coordinates and Java packages remain unchanged.

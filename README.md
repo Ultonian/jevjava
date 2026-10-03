@@ -231,6 +231,10 @@ scan. Trivy must be installed; a missing binary or failed scan blocks the commit
 The first scan downloads its database; later scans reuse the cache and refresh it when needed,
 so network access is still required for refreshes and uncached Maven metadata. CI runs Trivy in
 its own job rather than duplicating it in the pre-commit job.
+That job waits for the builds and restores their Maven dependency cache before scanning. If the
+cache is unavailable, it first runs `./mvnw -DskipTests install` to resolve the full reactor.
+This avoids starting Trivy with an empty Maven cache and fetching every dependency POM again.
+Dependency lookups and vulnerability database refreshes remain enabled; scan failures still fail CI.
 
 The gate needs no credentials. To also run the live probes, copy `.env.example` to `.env`
 (git-ignored), add your key, and source it into the shell first:

@@ -54,9 +54,21 @@ jobs:
 
   trivy:
     name: Trivy (dependencies and config)
+    # Wait for setup-java's post-build cache save before restoring Maven dependencies.
+    needs: verify
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        id: java
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - name: Populate Maven dependencies if the build cache is unavailable
+        if: steps.java.outputs.cache-hit != 'true'
+        # Resolve the whole reactor, including unpublished inter-module dependencies.
+        run: ./mvnw --batch-mode --no-transfer-progress -DskipTests install
       - name: Scan repository
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
         with:
