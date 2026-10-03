@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>jev-core</artifactId>
-  <name>jev-core</name>
+  <name>Jev Java Unofficial SDK - Core</name>
   <description>Zero-dependency (java.net.http + Jackson) client for the Jev System One API.</description>
 
   <dependencies>

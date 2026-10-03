@@ -54,7 +54,7 @@ class HttpRequestTest {
     assertThat(req.header("Authorization")).isEqualTo("Bearer test-key");
     assertThat(req.header("Accept")).isEqualTo("application/json");
     assertThat(req.header("Content-Type")).isEqualTo("application/json");
-    assertThat(req.header("User-Agent")).startsWith("jev-java/");
+    assertThat(req.header("User-Agent")).startsWith("jevjavauosdk/");
     assertThat(req.header("X-TypeSafe-SDK")).isEqualTo(req.header("User-Agent"));
     assertThat(req.header("X-TypeSafe-Runtime")).startsWith("java/").contains("(");
     assertThat(req.header("X-TypeSafe-Retry-Count")).isNull();
@@ -111,7 +111,7 @@ class HttpRequestTest {
     TestServer.Recorded req = server.lastRequest();
     assertThat(req.header("Authorization")).isEqualTo("Bearer test-key");
     assertThat(req.header("Content-Type")).isEqualTo("application/json");
-    assertThat(req.header("User-Agent")).startsWith("jev-java/");
+    assertThat(req.header("User-Agent")).startsWith("jevjavauosdk/");
     assertThat(req.header("X-Shared")).isEqualTo("request");
     assertThat(req.header("X-TypeSafe-Retry-Count")).isNull();
   }

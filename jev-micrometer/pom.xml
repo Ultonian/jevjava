@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>jev-micrometer</artifactId>
-  <name>jev-micrometer</name>
+  <name>Jev Java Unofficial SDK - Micrometer integration</name>
   <description>Micrometer metrics for the Jev client: call and attempt timers, token counters, and allowlisted per-question confidence summaries.</description>
 
   <dependencies>

@@ -15,6 +15,9 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Rename the project to `jevjavauosdk` (Jev Java Unofficial SDK), clarify its independent status
+  in documentation and Maven metadata, and identify requests as `jevjavauosdk/<version>` in
+  `User-Agent` and `X-TypeSafe-SDK`. Maven coordinates and Java packages remain unchanged.
 - Refresh stable test/build dependencies, the Maven distribution, pre-commit hooks and pinned
   GitHub Actions. Adopt JUnit 6 and current Checkstyle/Google Java Format while retaining Java 21
   as the SDK's minimum runtime.

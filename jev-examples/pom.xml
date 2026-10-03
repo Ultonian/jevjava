@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>jev-examples</artifactId>
-  <name>jev-examples</name>
+  <name>Jev Java Unofficial SDK - Examples</name>
   <description>Runnable examples. Not published.</description>
 
   <properties>

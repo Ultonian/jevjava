@@ -8,7 +8,7 @@ import java.util.Properties;
 public final class Version {
 
   /** SDK name used in {@code User-Agent} and {@code X-TypeSafe-SDK}. */
-  public static final String SDK_NAME = "jev-java";
+  public static final String SDK_NAME = "jevjavauosdk";
 
   /** The SDK version from the build, or {@code dev} when running from sources. */
   public static final String VERSION = load();
@@ -23,7 +23,7 @@ public final class Version {
           + System.getProperty("os.arch", "unknown")
           + ")";
 
-  /** {@code jev-java/<version>}. */
+  /** {@code jevjavauosdk/<version>}. */
   public static final String SDK = SDK_NAME + "/" + VERSION;
 
   private Version() {}

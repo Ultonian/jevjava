@@ -9,7 +9,7 @@
   </parent>
 
   <artifactId>jev-test</artifactId>
-  <name>jev-test</name>
+  <name>Jev Java Unofficial SDK - Test helpers</name>
   <description>RecordingJevClient: an in-memory JevClient for tests that returns scripted answers and records requests.</description>
 
   <dependencies>

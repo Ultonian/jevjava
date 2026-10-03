@@ -1,11 +1,15 @@
-# jev-java
+# jevjavauosdk — Jev Java Unofficial SDK
 
-**Unofficial** Java 21+ SDK for [TypeSafe AI](https://typesafe.ai)'s Jev (System One API).
+**jevjavauosdk** (Jev Java Unofficial SDK) is an independently maintained Java 21+ SDK for
+[TypeSafe AI](https://typesafe.ai)'s Jev (System One API).
 This project is not affiliated with, endorsed by, or supported by TypeSafe AI.
+References to TypeSafe AI and Jev identify the service this SDK interoperates with.
 
 Status: pre-release, not yet on Maven Central. The client, the helpers, Micrometer metrics, a
 recording test fake and a runnable example are complete; see [docs/PARITY.md](docs/PARITY.md) for
 how each behaviour compares with the official Python and JavaScript SDKs and the live API.
+The proposed branch, benchmark and Maven publication process is in the
+[release strategy](docs/RELEASING.md).
 
 | Module | Runtime dependencies | What it is |
 |---|---|---|
@@ -20,7 +24,7 @@ how each behaviour compares with the official Python and JavaScript SDKs and the
 Not on Maven Central yet. Until it is, install locally and depend on the snapshot:
 
 ```sh
-git clone https://github.com/Ultonian/jevjava && cd jevjava && ./mvnw -q -DskipTests install
+git clone https://github.com/Ultonian/jevjavauosdk && cd jevjavauosdk && ./mvnw -q -DskipTests install
 ```
 
 ```xml

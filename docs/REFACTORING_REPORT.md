@@ -87,7 +87,7 @@ After the fix, clean reactor verification passed on Java 21 and 25 (291 executed
 
 ## Review follow-up: atomic test delivery release
 
-[The review finding](https://github.com/Ultonian/jevjava/pull/1#discussion_r4070329056) identified an inherited race in `HttpTestFixture.HoldingDelivery`. Its open check and enqueue could overlap release's iteration/clear, stranding or deleting a task; concurrent releases could also launch a queued task twice.
+[The review finding](https://github.com/Ultonian/jevjavauosdk/pull/1#discussion_r4070329056) identified an inherited race in `HttpTestFixture.HoldingDelivery`. Its open check and enqueue could overlap release's iteration/clear, stranding or deleting a task; concurrent releases could also launch a queued task twice.
 
 The fixture now protects open/check/enqueue and open/snapshot/clear with one monitor and starts captured tasks after unlocking. Its default queue remains a `CopyOnWriteArrayList` for existing diagnostic reads. Controlled queue and launch collaborators allow its own regression tests to force the relevant interleavings.
 

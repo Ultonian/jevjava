@@ -1,6 +1,6 @@
 # Parity matrix
 
-How every observable behaviour of jev-java compares with the API contract and the two official
+How every observable behaviour of jevjavauosdk compares with the API contract and the two official
 SDKs. This is a source audit against pinned snapshots, not a claim that a live API test has passed
 (live probes are marked as such and run only with `JEV_RUN_LIVE_TESTS=1`).
 
@@ -105,7 +105,7 @@ Tests are in `jev-core/src/test/java`. A row is ticked (`[x]`) only when its tes
 | [x] | API key validation | — | internal whitespace, control or non-ASCII characters rejected at construction; message never contains the key | not validated | same as Python (printable ASCII U+0021–U+007E only) | config | `JevClientBuilderTest.invalidApiKeyIsRejectedWithoutEchoingIt` |
 | [x] | Credentials in transport errors | — | credential header values redacted from connection-error messages; unredacted original dropped from the chain | not redacted | the JDK quotes a rejected header value, so the error names the header only and does not chain the JDK exception | transport | `HttpRequestTest.invalidHeaderValueIsReportedWithoutEchoingIt` |
 | [x] | Defaults | — | base `https://api.typesafe.ai`, model `jev-latest`, timeout 10 s | same | same; deadline 30 s (Java-only); trailing slashes stripped from base URL; path prefix kept | config | `JevClientBuilderTest.defaultsWhenOnlyTheKeyIsSet`, `HttpJevClientTest.baseUrlPrefixAndTrailingSlashesAreHandled` |
-| [x] | Identification headers | — | `User-Agent`/`X-TypeSafe-SDK: typesafe-sdk/<v>`, `X-TypeSafe-Runtime: python/… (os; arch)` | same with `node/…` | `jev-java/<v>` and `java/<Runtime.version()> (<os.name>; <os.arch>)` | transport | `HttpJevClientTest.systemOneSendsTheDocumentedRequestAndParsesTheResponse` |
+| [x] | Identification headers | — | `User-Agent`/`X-TypeSafe-SDK: typesafe-sdk/<v>`, `X-TypeSafe-Runtime: python/… (os; arch)` | same with `node/…` | `jevjavauosdk/<v>` and `java/<Runtime.version()> (<os.name>; <os.arch>)` | transport | `HttpJevClientTest.systemOneSendsTheDocumentedRequestAndParsesTheResponse` |
 | [x] | `Authorization: Bearer`, `Accept: application/json`, `Content-Type` on bodies only | schema | yes | yes | yes | transport | `HttpJevClientTest.systemOneSends…`, `modelsSendsGetWithoutBodyOrContentType` |
 | [x] | `X-TypeSafe-Retry-Count` | — | absent on first attempt, `1..n` on retries; caller value stripped | same | same | transport | `HttpJevClientTest.retriesThenSucceedsWithRetryCountHeaderAndBackoff`, `sdkHeadersAlwaysWinAndMergeIsCaseInsensitive` |
 | [x] | Header merge | — | case-insensitive; request > client; SDK headers win; `Content-Type` forced on bodies | same; JS strips `Content-Type` on bodyless GET | case-insensitive; request > client; SDK headers and `Content-Type: application/json` on bodies always win; no `Content-Type` on GET (= JS) | transport | `HttpJevClientTest.sdkHeadersAlwaysWinAndMergeIsCaseInsensitive` |

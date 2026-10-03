@@ -7,7 +7,7 @@
     <version>0.1.0-SNAPSHOT</version>
   </parent>
   <artifactId>jev-benchmarks</artifactId>
-  <name>jev-benchmarks</name>
+  <name>Jev Java Unofficial SDK - Benchmarks</name>
   <description>Local component benchmarks. Built by verify, measured only on explicit invocation.</description>
   <properties>
     <maven.deploy.skip>true</maven.deploy.skip>
