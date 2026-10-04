@@ -2,8 +2,8 @@ package net.codefinch.jev.benchmarks.components;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import net.codefinch.jev.JevResponseValidationException;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
+import net.codefinch.jev.exception.JevResponseValidationException;
 import net.codefinch.jev.internal.ResponseParser;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;

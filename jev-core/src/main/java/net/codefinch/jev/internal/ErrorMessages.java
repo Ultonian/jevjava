@@ -5,7 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.StringJoiner;
-import net.codefinch.jev.JevUnprocessableEntityException.FieldError;
+import net.codefinch.jev.exception.JevUnprocessableEntityException.FieldError;
 
 /**
  * Best-effort extraction of a human message from an error body, in the upstream Python SDK's order:

@@ -21,7 +21,6 @@ import net.codefinch.jev.ChoiceCriteria;
 import net.codefinch.jev.ChoiceQuestion;
 import net.codefinch.jev.Content;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.JevRateLimitException;
 import net.codefinch.jev.ModelList;
 import net.codefinch.jev.ModelMetadata;
 import net.codefinch.jev.NoulAnswer;
@@ -33,6 +32,7 @@ import net.codefinch.jev.ScoreQuestion;
 import net.codefinch.jev.State;
 import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.exception.JevRateLimitException;
 import net.codefinch.jev.internal.Json;
 import net.codefinch.jev.internal.ResponseParser;
 import org.junit.jupiter.api.Test;
@@ -412,7 +412,7 @@ class RecordingJevClientTest {
               () -> {
                 try {
                   c.close();
-                } catch (net.codefinch.jev.JevException e) {
+                } catch (net.codefinch.jev.exception.JevException e) {
                   threw.set(e.getMessage().contains("interrupted"));
                   interruptedFlag.set(Thread.currentThread().isInterrupted());
                 }

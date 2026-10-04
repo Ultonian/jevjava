@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import net.codefinch.jev.exception.JevAnswerTypeException;
+import net.codefinch.jev.exception.JevMissingAnswerException;
 
 /**
  * The answers of one response, keyed by the question ids of the request, in response order.

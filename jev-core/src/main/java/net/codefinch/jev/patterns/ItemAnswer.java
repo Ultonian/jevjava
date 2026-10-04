@@ -3,10 +3,10 @@ package net.codefinch.jev.patterns;
 import java.util.Optional;
 import net.codefinch.jev.Answer;
 import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.JevAnswerTypeException;
-import net.codefinch.jev.JevMissingAnswerException;
 import net.codefinch.jev.NoulAnswer;
 import net.codefinch.jev.ScoreAnswer;
+import net.codefinch.jev.exception.JevAnswerTypeException;
+import net.codefinch.jev.exception.JevMissingAnswerException;
 
 /**
  * One item of a {@link FanOut} with its answer.

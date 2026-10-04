@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 import java.time.Duration;
 import java.util.List;

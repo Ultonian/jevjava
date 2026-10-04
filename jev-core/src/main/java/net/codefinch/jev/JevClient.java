@@ -1,6 +1,9 @@
 package net.codefinch.jev;
 
 import java.util.concurrent.CompletableFuture;
+import net.codefinch.jev.exception.JevDeadlineExceededException;
+import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.exception.JevInterruptedException;
 
 /**
  * A client for the Jev System One API. Implemented by the HTTP client and by the recording fake in

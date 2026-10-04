@@ -12,9 +12,7 @@ import net.codefinch.jev.Answers;
 import net.codefinch.jev.ChoiceAnswer;
 import net.codefinch.jev.ChoiceCriteria;
 import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.JevApiException;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.JevRateLimitException;
 import net.codefinch.jev.NoulAnswer;
 import net.codefinch.jev.NoulCriteria;
 import net.codefinch.jev.Questions;
@@ -24,6 +22,8 @@ import net.codefinch.jev.ScoreAnswer;
 import net.codefinch.jev.State;
 import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.exception.JevApiException;
+import net.codefinch.jev.exception.JevRateLimitException;
 import net.codefinch.jev.test.RecordingJevClient;
 import net.codefinch.jev.test.ScriptedAnswers;
 import org.junit.jupiter.api.Test;
@@ -102,7 +102,7 @@ class ReadmeUsageTest {
       assertThat(response.usage().inputTokens()).isEqualTo(210);
       assertThat(response.requestId()).contains("req-readme");
       assertThatThrownBy(() -> answers.noul("nope"))
-          .isInstanceOf(net.codefinch.jev.JevMissingAnswerException.class);
+          .isInstanceOf(net.codefinch.jev.exception.JevMissingAnswerException.class);
       assertThat(answers.get("nope")).isEmpty();
     }
   }

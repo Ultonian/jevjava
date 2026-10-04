@@ -15,6 +15,8 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Move SDK-specific exceptions to `net.codefinch.jev.exception`. This pre-release package change
+  requires updated imports and recompilation; exception names and inheritance remain the same.
 - Focus `docs/` on SDK usage and compatibility, remove completed refactoring reports, and move
   architecture, release-process and fixture-provenance notes to `.github/maintainers/`.
 - Run CI's Trivy scan after the Maven builds and restore their dependency cache, with a reactor

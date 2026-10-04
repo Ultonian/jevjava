@@ -18,12 +18,12 @@ import net.codefinch.jev.Answers;
 import net.codefinch.jev.CallObserver;
 import net.codefinch.jev.ChoiceAnswer;
 import net.codefinch.jev.Content;
-import net.codefinch.jev.JevInternalServerException;
 import net.codefinch.jev.NoulAnswer;
 import net.codefinch.jev.ResponseMetadata;
 import net.codefinch.jev.ScoreAnswer;
 import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.Usage;
+import net.codefinch.jev.exception.JevInternalServerException;
 import org.junit.jupiter.api.Test;
 
 class JevMetricsTest {

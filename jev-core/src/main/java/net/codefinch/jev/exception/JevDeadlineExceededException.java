@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 /**
  * The whole operation — all attempts, body delivery and backoff sleeps — exceeded its deadline. The

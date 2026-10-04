@@ -3,6 +3,7 @@ package net.codefinch.jev;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.OptionalInt;
+import net.codefinch.jev.exception.JevException;
 
 /**
  * Receives one event per HTTP attempt and one per call, for metrics and tracing. Register with

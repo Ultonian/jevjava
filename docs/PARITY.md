@@ -47,6 +47,9 @@ reporting a service problem; raw bodies can contain application data.
 
 ## Errors, retries and deadlines
 
+SDK-specific exception types are in `net.codefinch.jev.exception`. Code written against the earlier
+root-package types must update imports and recompile; exception names and inheritance are unchanged.
+
 | Failure | Java result |
 |---|---|
 | HTTP 400 / 401 / 403 / 404 | `JevBadRequestException` / `JevAuthenticationException` / `JevPermissionDeniedException` / `JevNotFoundException` |

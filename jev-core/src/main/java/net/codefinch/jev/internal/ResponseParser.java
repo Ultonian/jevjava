@@ -12,7 +12,6 @@ import net.codefinch.jev.Answer;
 import net.codefinch.jev.Answers;
 import net.codefinch.jev.ChoiceAnswer;
 import net.codefinch.jev.Content;
-import net.codefinch.jev.JevResponseValidationException;
 import net.codefinch.jev.ModelList;
 import net.codefinch.jev.ModelMetadata;
 import net.codefinch.jev.NoulAnswer;
@@ -20,6 +19,7 @@ import net.codefinch.jev.ResponseMetadata;
 import net.codefinch.jev.ScoreAnswer;
 import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.Usage;
+import net.codefinch.jev.exception.JevResponseValidationException;
 
 /**
  * Parses successful response bodies against the API schema.

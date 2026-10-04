@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 import java.util.ArrayList;
 import java.util.Collections;

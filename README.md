@@ -39,6 +39,7 @@ Core usage examples are exercised in CI by
 Snippets omit imports and application-specific callbacks such as `route` and `suggest`.
 Client and request types are in `net.codefinch.jev`; routing helpers are in
 `net.codefinch.jev.patterns`.
+SDK-specific exceptions are in `net.codefinch.jev.exception`.
 
 ### Create a client
 

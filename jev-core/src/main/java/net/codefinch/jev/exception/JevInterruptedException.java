@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 /**
  * The calling thread of a synchronous call was interrupted. The interrupt flag has been re-asserted

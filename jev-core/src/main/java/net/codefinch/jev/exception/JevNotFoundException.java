@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 import java.util.List;
 import java.util.Map;

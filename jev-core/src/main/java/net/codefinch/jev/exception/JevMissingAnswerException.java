@@ -1,4 +1,6 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
+
+import net.codefinch.jev.Answers;
 
 /**
  * A typed accessor on {@link Answers} was called for an id the response does not contain. This

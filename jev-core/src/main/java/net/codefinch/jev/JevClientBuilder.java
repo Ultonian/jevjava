@@ -18,6 +18,7 @@ import java.util.concurrent.Executors;
 import java.util.function.Function;
 import java.util.function.LongSupplier;
 import java.util.random.RandomGenerator;
+import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.internal.ClientConfig;
 import net.codefinch.jev.internal.HttpJevClient;
 import net.codefinch.jev.internal.Sleeper;

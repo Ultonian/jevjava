@@ -1,10 +1,11 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
+import net.codefinch.jev.ResponseMetadata;
 import net.codefinch.jev.internal.ErrorMessages;
 
 /**

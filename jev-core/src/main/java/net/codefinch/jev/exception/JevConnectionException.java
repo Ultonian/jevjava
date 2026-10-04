@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 /**
  * The request could not reach the server or the response could not be read. Retried by default.

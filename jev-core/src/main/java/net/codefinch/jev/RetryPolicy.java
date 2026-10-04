@@ -8,6 +8,12 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.random.RandomGenerator;
+import net.codefinch.jev.exception.JevApiException;
+import net.codefinch.jev.exception.JevConnectionException;
+import net.codefinch.jev.exception.JevDeadlineExceededException;
+import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.exception.JevInterruptedException;
+import net.codefinch.jev.exception.JevTimeoutException;
 
 /**
  * When and how failed attempts are retried. The defaults reproduce both official SDKs exactly: two

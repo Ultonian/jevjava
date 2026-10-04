@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 /**
  * Base class for SDK-specific failures. Unchecked. Mirrors upstream {@code TypeSafeError}. Invalid

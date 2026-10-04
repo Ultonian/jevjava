@@ -8,6 +8,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
+import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.internal.ClientConfig;
 import net.codefinch.jev.internal.HttpJevClient;
 import org.junit.jupiter.api.Test;

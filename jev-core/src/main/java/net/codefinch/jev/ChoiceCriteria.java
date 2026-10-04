@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
+import net.codefinch.jev.exception.JevBadRequestException;
 
 /**
  * The options of a {@link ChoiceQuestion}: labels in insertion order, each with a description or

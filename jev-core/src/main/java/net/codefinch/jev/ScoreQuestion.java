@@ -5,6 +5,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import net.codefinch.jev.exception.JevBadRequestException;
 
 /**
  * A question that rates the state against an ordered rubric. Level {@code i} of the answer is

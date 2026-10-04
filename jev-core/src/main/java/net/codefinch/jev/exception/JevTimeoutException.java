@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.exception;
 
 /**
  * One attempt exceeded its per-attempt timeout (headers or body delivery). Retried by default.

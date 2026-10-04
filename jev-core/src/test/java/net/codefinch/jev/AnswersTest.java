@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
+import net.codefinch.jev.exception.JevAnswerTypeException;
+import net.codefinch.jev.exception.JevMissingAnswerException;
 import org.junit.jupiter.api.Test;
 
 class AnswersTest {

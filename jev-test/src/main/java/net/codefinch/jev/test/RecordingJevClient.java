@@ -18,13 +18,13 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.JevException;
 import net.codefinch.jev.ModelList;
 import net.codefinch.jev.ModelMetadata;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.ResponseMetadata;
 import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.exception.JevException;
 
 /**
  * An in-memory {@link JevClient} for tests. Each {@code systemOne} call is answered, in order, by

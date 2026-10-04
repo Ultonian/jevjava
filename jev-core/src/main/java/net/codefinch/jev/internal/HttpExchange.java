@@ -18,11 +18,11 @@ import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import net.codefinch.jev.JevConnectionException;
-import net.codefinch.jev.JevException;
-import net.codefinch.jev.JevInterruptedException;
-import net.codefinch.jev.JevTimeoutException;
 import net.codefinch.jev.RequestOptions;
+import net.codefinch.jev.exception.JevConnectionException;
+import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.exception.JevInterruptedException;
+import net.codefinch.jev.exception.JevTimeoutException;
 
 /** Executes one HTTP exchange; operation policy and publication belong to the call. */
 final class HttpExchange {

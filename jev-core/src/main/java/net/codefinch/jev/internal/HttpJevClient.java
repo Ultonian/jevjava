@@ -14,11 +14,11 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.JevException;
 import net.codefinch.jev.ModelList;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.exception.JevException;
 
 /**
  * The HTTP {@link JevClient}. Owns admission, outstanding-call tracking and bounded resource

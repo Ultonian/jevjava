@@ -49,8 +49,9 @@ public final class Composite {
   /**
    * The composite value for a response's answers.
    *
-   * @throws net.codefinch.jev.JevMissingAnswerException if a weighted id is absent
-   * @throws net.codefinch.jev.JevAnswerTypeException if a weighted id is not a score answer
+   * @throws net.codefinch.jev.exception.JevMissingAnswerException if a weighted id is absent
+   * @throws net.codefinch.jev.exception.JevAnswerTypeException if a weighted id is not a score
+   *     answer
    */
   public double apply(Answers answers) {
     Objects.requireNonNull(answers, "answers");

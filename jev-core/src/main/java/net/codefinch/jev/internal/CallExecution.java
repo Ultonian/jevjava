@@ -17,14 +17,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import net.codefinch.jev.CallObserver;
-import net.codefinch.jev.JevApiException;
-import net.codefinch.jev.JevDeadlineExceededException;
-import net.codefinch.jev.JevException;
-import net.codefinch.jev.JevInterruptedException;
-import net.codefinch.jev.JevRateLimitException;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.RetryPolicy;
 import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.exception.JevApiException;
+import net.codefinch.jev.exception.JevDeadlineExceededException;
+import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.exception.JevInterruptedException;
+import net.codefinch.jev.exception.JevRateLimitException;
 
 /**
  * One admitted operation: retry/deadline policy, atomic attempt and terminal decisions,

@@ -267,14 +267,14 @@ public final class LoadSession implements AutoCloseable {
   }
 
   private static LoadAccounting.Outcome classify(Throwable failure) {
-    if (failure instanceof net.codefinch.jev.JevApiException api) {
+    if (failure instanceof net.codefinch.jev.exception.JevApiException api) {
       return api.status() >= 400 ? status(api.status()) : LoadAccounting.Outcome.OTHER;
     }
-    if (failure instanceof net.codefinch.jev.JevDeadlineExceededException) {
+    if (failure instanceof net.codefinch.jev.exception.JevDeadlineExceededException) {
       return LoadAccounting.Outcome.DEADLINE;
     }
     if (failure instanceof java.util.concurrent.CancellationException
-        || failure instanceof net.codefinch.jev.JevInterruptedException) {
+        || failure instanceof net.codefinch.jev.exception.JevInterruptedException) {
       return LoadAccounting.Outcome.CANCELLED;
     }
     return LoadAccounting.Outcome.OTHER;
