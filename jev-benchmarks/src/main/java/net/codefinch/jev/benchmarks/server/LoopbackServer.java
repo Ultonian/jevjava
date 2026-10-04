@@ -231,7 +231,8 @@ public final class LoopbackServer implements AutoCloseable {
     result.put("handlerCpuSamples", cpuSamples.get());
     result.put("handlerCpuSamplingInterval", CPU_SAMPLING_INTERVAL);
     result.put(
-        "handlerCpuInterpretation", "sum for every 64th request; not extrapolated total CPU");
+        "handlerCpuInterpretation",
+        "sum for every " + CPU_SAMPLING_INTERVAL + "th request; not extrapolated total CPU");
     result.put("handlerCpuSupported", ManagementFactory.getThreadMXBean().isThreadCpuTimeEnabled());
     result.put("rejectedTasks", rejected.get());
     result.put("ioFailures", failures.get());

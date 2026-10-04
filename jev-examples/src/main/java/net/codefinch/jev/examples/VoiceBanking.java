@@ -30,8 +30,10 @@ public final class VoiceBanking {
                   .build())
           .build();
 
-  /** Below 0.6 on any action, a support agent takes over (the docs' floor). */
-  // Equal thresholds intentionally omit the confirmation band for read-only balance requests.
+  /**
+   * Below 0.6 on any action, a support agent takes over (the docs' floor). Equal thresholds
+   * intentionally omit the confirmation band for read-only balance requests.
+   */
   static final ConfidenceGate BALANCE = ConfidenceGate.of(0.6, 0.6);
 
   /** Transfers: 0.6 to 0.85 asks the user to confirm; 0.85 and above approves. */

@@ -118,6 +118,7 @@ public final class LoadSession implements AutoCloseable {
   }
 
   private static HttpClient newTransport() {
+    // JevClientBuilder uses its attempt timeout for connectTimeout too; keep the control matched.
     return HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.NEVER)
         .connectTimeout(LoadSettings.ATTEMPT_TIMEOUT)

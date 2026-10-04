@@ -61,6 +61,9 @@ baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references
   Runs need no live API credentials; CI checks the harness without running timed benchmarks.
 
 ### Fixed
+- Keep benchmark script entry points usable with Python safe-path mode (`-P` or
+  `PYTHONSAFEPATH=1`). Finalize the manifest and stop the benchmark child if shutdown-hook
+  registration fails.
 - Apply ticket triage's refund priority boost at the same inclusive threshold as its refund
   workflow, and print the source only once when running all examples.
 
