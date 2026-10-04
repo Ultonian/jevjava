@@ -15,6 +15,8 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Focus `docs/` on SDK usage and compatibility, remove completed refactoring reports, and move
+  architecture, release-process and fixture-provenance notes to `.github/maintainers/`.
 - Run CI's Trivy scan after the Maven builds and restore their dependency cache, with a reactor
   install fallback when the cache is unavailable, to avoid repeated uncached Maven Central lookups.
 - Rename the project to `jevjavauosdk` (Jev Java Unofficial SDK), clarify its independent status
@@ -56,9 +58,7 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
 
 ### Added (readability refactor)
 - Eight shared lifecycle contracts exercised against both HTTP and recording clients.
-- [Internal architecture](docs/INTERNAL_ARCHITECTURE.md),
-  [test relocation inventory](docs/REFACTORING_TEST_INVENTORY.md), and
-  [refactoring verification report](docs/REFACTORING_REPORT.md). Verification passed on JDK 21
+- [Internal architecture](.github/maintainers/INTERNAL_ARCHITECTURE.md). Verification passed on JDK 21
   and 25; the subsequent live-service run on JDK 25 passed all 298 tests with no skips,
   including all eight examples (22 September 2026).
 

@@ -5,11 +5,10 @@
 This project is not affiliated with, endorsed by, or supported by TypeSafe AI.
 References to TypeSafe AI and Jev identify the service this SDK interoperates with.
 
-Status: pre-release, not yet on Maven Central. The client, the helpers, Micrometer metrics, a
-recording test fake and a runnable example are complete; see [docs/PARITY.md](docs/PARITY.md) for
-how each behaviour compares with the official Python and JavaScript SDKs and the live API.
-The proposed branch, benchmark and Maven publication process is in the
-[release strategy](docs/RELEASING.md).
+Status: pre-release, not yet on Maven Central. Supports synchronous and asynchronous requests,
+routing helpers, Micrometer metrics and an in-memory test client. Start below or use the
+[documentation index](docs/README.md); the [compatibility guide](docs/PARITY.md) explains validation,
+runtime behavior and differences from the pinned official SDKs.
 
 | Module | Runtime dependencies | What it is |
 |---|---|---|
@@ -35,7 +34,11 @@ git clone https://github.com/Ultonian/jevjavauosdk && cd jevjavauosdk && ./mvnw 
 </dependency>
 ```
 
-Every snippet below is compiled and run in CI (`jev-examples/…/ReadmeUsageTest`).
+Core usage examples are exercised in CI by
+[`ReadmeUsageTest`](jev-examples/src/test/java/net/codefinch/jev/examples/ReadmeUsageTest.java).
+Snippets omit imports and application-specific callbacks such as `route` and `suggest`.
+Client and request types are in `net.codefinch.jev`; routing helpers are in
+`net.codefinch.jev.patterns`.
 
 ### Create a client
 
@@ -54,6 +57,9 @@ JevClient configured =
 
 A client is thread-safe and meant to live as long as your application; `close()` it on shutdown
 (it is `AutoCloseable`).
+The SDK reads environment variables, but does not automatically load `.env` files. Supply an API
+key explicitly or export `TYPESAFE_API_KEY` before starting your application. Invalid keys fail
+when the client is built, with an error that does not include the key.
 
 ### Ask
 
@@ -127,17 +133,23 @@ future.cancel(true);                             // aborts the HTTP exchange and
 
 ### Errors and retries
 
-Everything the SDK throws is a `JevException` (unchecked). HTTP errors are `JevApiException`
+Request and response-processing failures use `JevException` (unchecked). Invalid builder/value
+arguments can also throw `IllegalArgumentException` or `NullPointerException`; using a closed
+client throws `IllegalStateException`. HTTP errors are `JevApiException`
 subclasses named after the status — `JevAuthenticationException` (401),
-`JevPermissionDeniedException` (403; also what a request with *no* key gets),
+`JevPermissionDeniedException` (403),
 `JevUnprocessableEntityException` (422, with `fieldErrors()`), `JevRateLimitException` (429,
 with `retryAfter()`), `JevInternalServerException` (any 5xx, `isOverloaded()` for 529) — each
 carrying the status, headers, raw body and request id. Transport failures are
 `JevConnectionException` / `JevTimeoutException`; an expired deadline is
 `JevDeadlineExceededException`.
 
-Retries match the official SDKs: 408, 429 and 5xx, connection errors and timeouts; two retries
-with 500 ms → 5 s backoff and 25 % jitter; `retry-after-ms` / `Retry-After` honoured up to 60 s.
+The default policy retries HTTP 408, 429 and 5xx, connection errors and per-attempt timeouts.
+It allows two retries after the first attempt, with exponential backoff starting at 500 ms,
+capped at 5 s, and up to 25 % subtracted as jitter. Valid server delays of up to 60 s are honored;
+the 30 s operation deadline still limits the whole call. Use `RetryPolicy.NONE` to disable retries.
+Async failures are exposed by the future; `join()` wraps failures in `CompletionException`,
+while cancellation throws `CancellationException`.
 
 ```java
 try {
@@ -151,6 +163,8 @@ try {
 
 ### Configuration
 
+Explicit builder values take precedence over environment variables, then defaults.
+
 | Setting | Builder | Environment | Default |
 |---|---|---|---|
 | API key | `apiKey` | `TYPESAFE_API_KEY` | required |
@@ -159,8 +173,13 @@ try {
 | Log level | `logLevel` | `TYPESAFE_LOG_LEVEL` | `warn`. As in the official SDKs: `info` = one line per attempt and retry; `debug` adds headers (credentials redacted) and bodies. Emitted via `System.Logger` |
 | Per-attempt timeout | `timeout` | — | 10 s |
 | Operation deadline | `deadline` / `noDeadline()` | — | 30 s |
+| Shutdown grace | `closeGracePeriod` | — | 10 s |
+| Result publication during shutdown | `publicationTimeout` | — | 5 s |
 | Retry policy | `retryPolicy` | — | `RetryPolicy.DEFAULT` |
 | Transport / executor | `httpClient` / `executor` | — | SDK-owned; caller-supplied ones are never shut down |
+
+An injected `HttpClient` must use `Redirect.NEVER`. DEBUG logs include request and response
+bodies; header redaction does not remove sensitive data from those bodies.
 
 ## Routing on answers
 
@@ -188,16 +207,41 @@ for (ItemAnswer<String> a : spam.answers(client.systemOne(state, spam.questions(
 
 ## Metrics and testing
 
+Add `net.codefinch.jev:jev-micrometer:0.1.0-SNAPSHOT` for metrics. Provide your application's
+Micrometer `MeterRegistry` and an API key:
+
 ```java
 JevMetrics metrics = JevMetrics.builder(registry).questionTags(Set.of("department")).build();
-JevClient client = JevClient.builder().observer(metrics).build();   // jev.call, jev.attempt, jev.tokens, jev.confidence
+JevClient client = JevClient.builder().apiKey(apiKey).observer(metrics).build();
+```
+
+`JevMetrics` is in `net.codefinch.jev.micrometer`. It records `jev.call` and `jev.attempt` timers,
+`jev.tokens` counters, and `jev.confidence` / `jev.noul` summaries only for allowlisted question ids.
+Observer delivery is asynchronous, so metrics may arrive after a request returns. Close the client
+on application shutdown; your application owns the registry.
+
+For application tests, add the test client with Maven's `test` scope:
+
+```xml
+<dependency>
+  <groupId>net.codefinch.jev</groupId>
+  <artifactId>jev-test</artifactId>
+  <version>0.1.0-SNAPSHOT</version>
+  <scope>test</scope>
+</dependency>
 ```
 
 ```java
-RecordingJevClient fake = new RecordingJevClient()                  // jev-test
-    .enqueue(ScriptedAnswers.neutral(questions).noul("refund_requested", 0.95));
-// ... run the code under test with `fake` as its JevClient, then inspect fake.requests()
+try (RecordingJevClient fake = new RecordingJevClient()
+    .enqueue(ScriptedAnswers.neutral(questions).noul("refund_requested", 0.95))) {
+  // Pass fake to your application as its JevClient, then inspect fake.requests().
+}
 ```
+
+`RecordingJevClient` and `ScriptedAnswers` are in `net.codefinch.jev.test`. The fake needs no API
+key or network access. Scripts are consumed in order; once exhausted, the default responder
+returns neutral answers. Use `enqueueFailure(...)` for error paths. It does not simulate HTTP
+retry/backoff behavior.
 
 ## Examples
 
@@ -236,10 +280,15 @@ cache is unavailable, it first runs `./mvnw -DskipTests install` to resolve the 
 This avoids starting Trivy with an empty Maven cache and fetching every dependency POM again.
 Dependency lookups and vulnerability database refreshes remain enabled; scan failures still fail CI.
 
-The gate needs no credentials. To also run the live probes, copy `.env.example` to `.env`
-(git-ignored), add your key, and source it into the shell first:
+The normal gate needs no credentials. Live tests require both `JEV_RUN_LIVE_TESTS=1` and
+`TYPESAFE_API_KEY`. To opt in, copy `.env.example` to `.env` (git-ignored), add your key, and
+source it into the shell first. These tests make real API calls and consume account usage:
 
 ```sh
 set -a; . ./.env; set +a
 ./mvnw verify                        # LiveApiTest / LiveExamplesTest now run against the API
 ```
+
+Maintainer notes: [architecture](.github/maintainers/INTERNAL_ARCHITECTURE.md),
+[release strategy](.github/maintainers/RELEASING.md) and
+[fixture provenance](.github/maintainers/UPSTREAM_FIXTURES.md).

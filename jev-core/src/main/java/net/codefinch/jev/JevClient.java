@@ -3,13 +3,13 @@ package net.codefinch.jev;
 import java.util.concurrent.CompletableFuture;
 
 /**
- * A client for the Jev System One API. Implemented by the HTTP client (Phase 2) and by the
- * recording fake in {@code jev-test}, so application code and its tests share one contract.
+ * A client for the Jev System One API. Implemented by the HTTP client and by the recording fake in
+ * {@code jev-test}, so application code and its tests share one contract.
  *
  * <h2>Threading</h2>
  *
- * <p>Implementations are immutable and thread-safe; one instance per process is the intended use.
- * Synchronous calls run on the caller's thread. Asynchronous calls run on the client's executor.
+ * <p>Implementations are thread-safe; one instance per process is the intended use. Synchronous
+ * calls run on the caller's thread. Asynchronous calls run on the client's executor.
  *
  * <h2>Timeouts and deadline</h2>
  *

@@ -27,7 +27,7 @@ import net.codefinch.jev.SystemOneResponse;
  * <p>Admission and the transition to closing share one lock. Cancellation and application code run
  * outside it. Close checks public-future state, never callback completion or registry emptiness;
  * concurrent and repeated closers recheck publication within their own bounded shutdown budget. See
- * {@code docs/INTERNAL_ARCHITECTURE.md} for the threading and ownership map.
+ * {@code .github/maintainers/INTERNAL_ARCHITECTURE.md} for the threading and ownership map.
  */
 public final class HttpJevClient implements JevClient {
   private static final Logger LOG = System.getLogger(HttpJevClient.class.getName());

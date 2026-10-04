@@ -1,7 +1,8 @@
 package net.codefinch.jev;
 
 /**
- * Base of every exception this SDK throws. Unchecked. Mirrors upstream {@code TypeSafeError}.
+ * Base class for SDK-specific failures. Unchecked. Mirrors upstream {@code TypeSafeError}. Invalid
+ * arguments can also throw standard Java exceptions.
  *
  * <p>Hierarchy: {@link JevApiException} for non-2xx responses and invalid success bodies, {@link
  * JevConnectionException} (and its subclasses) for transport failures, and a few Java-only types

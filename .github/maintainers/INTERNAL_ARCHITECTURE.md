@@ -2,7 +2,7 @@
 
 The four SDK/example modules are `jev-core` (public API and transport), `jev-test` (scripted/recording clients), `jev-micrometer` (metrics observations), and `jev-examples` (consumer usage). Java 21 is the minimum runtime; verification also runs on Java 25.
 
-The reactor also builds [`jev-benchmarks`](../jev-benchmarks/README.md), an unpublished developer tool for component, loopback HTTP and in-memory transport measurements. Timed runs require explicit invocation. Its dependencies do not flow back into the SDK modules; its workloads, controls and diagnostics remain outside production code.
+The reactor also builds [`jev-benchmarks`](../../jev-benchmarks/README.md), an unpublished developer tool for component, loopback HTTP and in-memory transport measurements. Timed runs require explicit invocation. Its dependencies do not flow back into the SDK modules; its workloads, controls and diagnostics remain outside production code.
 
 ## Ownership
 
@@ -41,18 +41,16 @@ The fake keeps separate state and no HTTP retry engine. Its private `executeAndP
 
 | Behavior | Reading path | Tests |
 |---|---|---|
-| Ordinary request | Facade builds spec and admits call; call executes exchange and parser, claims outcome, publishes | [HttpRequestTest](../jev-core/src/test/java/net/codefinch/jev/HttpRequestTest.java), [CallObserverTest](../jev-core/src/test/java/net/codefinch/jev/CallObserverTest.java) |
-| Retry | Call computes remaining budget, executes attempt, applies existing policy and cancellable backoff | [HttpRetryTest](../jev-core/src/test/java/net/codefinch/jev/HttpRetryTest.java), [RetryPolicyTest](../jev-core/src/test/java/net/codefinch/jev/RetryPolicyTest.java) |
-| Deadline | Call arms independent scheduler; expiry claims outcome, cancels work, and publishes | [HttpDeadlineTest](../jev-core/src/test/java/net/codefinch/jev/HttpDeadlineTest.java), [HttpPublicationTest](../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
-| Cancellation | Cancellation-aware future claims outcome before cancelling handle and publishing | [HttpCancellationTest](../jev-core/src/test/java/net/codefinch/jev/HttpCancellationTest.java) |
-| Observer ordering | Attempt start reserves slot; attempt cleanup fills it; terminal event follows | [CallObserverLifecycleTest](../jev-core/src/test/java/net/codefinch/jev/CallObserverLifecycleTest.java), [HttpObserverLifecycleTest](../jev-core/src/test/java/net/codefinch/jev/HttpObserverLifecycleTest.java) |
-| Concurrent close | Client stops admission, cancels admitted work, checks publication and resource ownership | [HttpShutdownTest](../jev-core/src/test/java/net/codefinch/jev/HttpShutdownTest.java), [HttpPublicationTest](../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
-| Shared fake/HTTP guarantees | Public client contract through two controlled fixture adapters | [ClientContractTest](../jev-test/src/test/java/net/codefinch/jev/test/ClientContractTest.java) |
-| Logging and metrics | Existing diagnostic sink and observer adapter | [HttpDiagnosticsTest](../jev-core/src/test/java/net/codefinch/jev/HttpDiagnosticsTest.java), [JevMetricsTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsTest.java), [JevMetricsIntegrationTest](../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsIntegrationTest.java) |
+| Ordinary request | Facade builds spec and admits call; call executes exchange and parser, claims outcome, publishes | [HttpRequestTest](../../jev-core/src/test/java/net/codefinch/jev/HttpRequestTest.java), [CallObserverTest](../../jev-core/src/test/java/net/codefinch/jev/CallObserverTest.java) |
+| Retry | Call computes remaining budget, executes attempt, applies existing policy and cancellable backoff | [HttpRetryTest](../../jev-core/src/test/java/net/codefinch/jev/HttpRetryTest.java), [RetryPolicyTest](../../jev-core/src/test/java/net/codefinch/jev/RetryPolicyTest.java) |
+| Deadline | Call arms independent scheduler; expiry claims outcome, cancels work, and publishes | [HttpDeadlineTest](../../jev-core/src/test/java/net/codefinch/jev/HttpDeadlineTest.java), [HttpPublicationTest](../../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
+| Cancellation | Cancellation-aware future claims outcome before cancelling handle and publishing | [HttpCancellationTest](../../jev-core/src/test/java/net/codefinch/jev/HttpCancellationTest.java) |
+| Observer ordering | Attempt start reserves slot; attempt cleanup fills it; terminal event follows | [CallObserverLifecycleTest](../../jev-core/src/test/java/net/codefinch/jev/CallObserverLifecycleTest.java), [HttpObserverLifecycleTest](../../jev-core/src/test/java/net/codefinch/jev/HttpObserverLifecycleTest.java) |
+| Concurrent close | Client stops admission, cancels admitted work, checks publication and resource ownership | [HttpShutdownTest](../../jev-core/src/test/java/net/codefinch/jev/HttpShutdownTest.java), [HttpPublicationTest](../../jev-core/src/test/java/net/codefinch/jev/HttpPublicationTest.java) |
+| Shared fake/HTTP guarantees | Public client contract through two controlled fixture adapters | [ClientContractTest](../../jev-test/src/test/java/net/codefinch/jev/test/ClientContractTest.java) |
+| Logging and metrics | Existing diagnostic sink and observer adapter | [HttpDiagnosticsTest](../../jev-core/src/test/java/net/codefinch/jev/HttpDiagnosticsTest.java), [JevMetricsTest](../../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsTest.java), [JevMetricsIntegrationTest](../../jev-micrometer/src/test/java/net/codefinch/jev/micrometer/JevMetricsIntegrationTest.java) |
 
-The controlled `HttpTestFixture.HoldingDelivery` queue also uses one monitor for open/check/enqueue and open/snapshot/clear. It launches tasks outside the monitor so concurrent release and new submissions can proceed independently. [HoldingDeliveryTest](../jev-core/src/test/java/net/codefinch/jev/HoldingDeliveryTest.java) forces the enqueue/clear and concurrent-release interleavings.
-
-See [the test relocation inventory](REFACTORING_TEST_INVENTORY.md) for original method locations.
+The controlled `HttpTestFixture.HoldingDelivery` queue also uses one monitor for open/check/enqueue and open/snapshot/clear. It launches tasks outside the monitor so concurrent release and new submissions can proceed independently. [HoldingDeliveryTest](../../jev-core/src/test/java/net/codefinch/jev/HoldingDeliveryTest.java) forces the enqueue/clear and concurrent-release interleavings.
 
 ## Where to change behavior
 

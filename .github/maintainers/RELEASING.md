@@ -79,7 +79,7 @@ the normal release process. See [Central immutability](https://central.sonatype.
 ## Benchmark the candidate before tagging
 
 Run after functional stabilization, on a quiet dedicated machine rather than a shared CI runner.
-Use the [existing benchmark commands](../jev-benchmarks/README.md) and archive the benchmark JAR
+Use the [existing benchmark commands](../../jev-benchmarks/README.md) and archive the benchmark JAR
 built from the same clean candidate checkout. Verify its SDK class/resource entries match the
 release JARs; the current study scripts cannot prove build provenance from a supplied JAR alone.
 
