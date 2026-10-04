@@ -15,6 +15,9 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Move the 20 request/response data types to `net.codefinch.jev.model`, keeping each sealed
+  hierarchy together. The root package now contains only the five client/configuration entry
+  points. Update model imports and recompile; Maven coordinates and behavior are unchanged.
 - Move SDK-specific exceptions to `net.codefinch.jev.exception`. This pre-release package change
   requires updated imports and recompilation; exception names and inheritance remain the same.
 - Focus `docs/` on SDK usage and compatibility, remove completed refactoring reports, and move

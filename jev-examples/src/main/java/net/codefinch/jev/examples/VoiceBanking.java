@@ -2,12 +2,12 @@ package net.codefinch.jev.examples;
 
 import java.io.PrintStream;
 import java.util.List;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.test.RecordingJevClient;
 import net.codefinch.jev.test.ScriptedAnswers;

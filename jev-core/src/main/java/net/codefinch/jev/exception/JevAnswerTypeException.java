@@ -1,6 +1,6 @@
 package net.codefinch.jev.exception;
 
-import net.codefinch.jev.Answers;
+import net.codefinch.jev.model.Answers;
 
 /**
  * A typed accessor on {@link Answers} was called for an id whose answer is a different primitive.

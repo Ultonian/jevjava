@@ -5,20 +5,20 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
-import net.codefinch.jev.Answer;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Question;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.ResponseMetadata;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.ScoreQuestion;
-import net.codefinch.jev.SystemOneResponse;
-import net.codefinch.jev.Usage;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Question;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.ScoreQuestion;
+import net.codefinch.jev.model.SystemOneResponse;
+import net.codefinch.jev.model.Usage;
 
 /**
  * Builds the answers a {@link RecordingJevClient} returns. Start from {@link #neutral(Questions)}

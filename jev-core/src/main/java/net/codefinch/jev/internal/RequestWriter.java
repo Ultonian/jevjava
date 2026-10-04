@@ -5,13 +5,13 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.util.Map;
 import java.util.Optional;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Question;
-import net.codefinch.jev.ScoreQuestion;
-import net.codefinch.jev.SystemOneRequest;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Question;
+import net.codefinch.jev.model.ScoreQuestion;
+import net.codefinch.jev.model.SystemOneRequest;
 
 /**
  * Serialises a {@link SystemOneRequest} to the wire JSON. An {@code Optional.empty()} field is

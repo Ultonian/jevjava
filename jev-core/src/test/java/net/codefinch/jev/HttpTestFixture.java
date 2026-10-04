@@ -14,6 +14,10 @@ import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 import java.util.random.RandomGenerator;
 import net.codefinch.jev.internal.Sleeper;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
 
 /** Explicit per-test transport and controllable delivery fixtures. */
 final class HttpTestFixture implements AutoCloseable {

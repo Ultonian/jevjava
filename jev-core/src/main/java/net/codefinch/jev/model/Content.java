@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.model;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;

@@ -12,10 +12,10 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.api.Test;
 
 /** Metrics through the real HTTP client: a 500 then a 200 on a local server. */

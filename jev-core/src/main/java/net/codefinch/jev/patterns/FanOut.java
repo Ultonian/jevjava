@@ -8,15 +8,15 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Question;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.ScoreQuestion;
-import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Question;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ScoreQuestion;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * One question per item in a single call. Every question in a call sees the same {@code state} and

@@ -1,6 +1,6 @@
 package net.codefinch.jev.patterns;
 
-import net.codefinch.jev.NoulAnswer;
+import net.codefinch.jev.model.NoulAnswer;
 
 /**
  * Routes a Noul answer three ways on its probability of yes: {@code YES} at or above {@code yes},

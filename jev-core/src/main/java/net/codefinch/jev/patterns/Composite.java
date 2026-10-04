@@ -4,8 +4,8 @@ import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ScoreAnswer;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ScoreAnswer;
 
 /**
  * A normalised weighted sum of Score answers: each score is divided by its top level (so every

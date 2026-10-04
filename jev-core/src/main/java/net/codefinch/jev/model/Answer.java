@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.model;
 
 /**
  * One answer in a response. Sealed so a {@code switch} over the three primitives is exhaustive.

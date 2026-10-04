@@ -2,9 +2,9 @@ package net.codefinch.jev.benchmarks.components;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import java.util.concurrent.TimeUnit;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.SystemOneRequest;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

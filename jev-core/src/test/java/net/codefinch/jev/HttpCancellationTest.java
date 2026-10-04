@@ -22,6 +22,8 @@ import java.util.concurrent.atomic.AtomicReference;
 import net.codefinch.jev.exception.JevInterruptedException;
 import net.codefinch.jev.internal.HttpJevClient;
 import net.codefinch.jev.internal.Sleeper;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

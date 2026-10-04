@@ -4,6 +4,7 @@ Jev Java Unofficial SDK (`jevjavauosdk`) is an independent Java 21+ client for t
 API. It is not affiliated with, endorsed by, or supported by TypeSafe AI.
 
 - [Install and make a request](../README.md#usage): dependencies, client configuration and typed answers.
+- [Choose the right imports](../README.md#packages): client, model, exception and routing packages.
 - [Handle errors and retries](../README.md#errors-and-retries): failure types, retry policy and deadlines.
 - [Add metrics or test without the API](../README.md#metrics-and-testing): Micrometer and the recording client.
 - [Run the examples](../jev-examples/README.md): eight complete application patterns, with a fake or the live service.

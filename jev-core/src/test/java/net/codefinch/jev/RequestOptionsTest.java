@@ -7,6 +7,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.ModelMetadata;
+import net.codefinch.jev.model.ResponseMetadata;
 import org.junit.jupiter.api.Test;
 
 class RequestOptionsTest {

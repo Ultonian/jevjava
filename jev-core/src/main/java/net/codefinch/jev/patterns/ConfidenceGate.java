@@ -1,7 +1,7 @@
 package net.codefinch.jev.patterns;
 
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.ScoreAnswer;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.ScoreAnswer;
 
 /**
  * Routes a Choice or Score answer three ways on its {@code confidence}: {@code ACT} at or above

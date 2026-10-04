@@ -6,6 +6,12 @@ The reactor also builds [`jev-benchmarks`](../../jev-benchmarks/README.md), an u
 
 ## Ownership
 
+The public core API has four packages: `net.codefinch.jev` for the five client/configuration entry
+points, `.model` for the 20 request/response data types, `.exception` for the 16 SDK-specific
+exceptions, and `.patterns` for routing helpers. Each sealed hierarchy stays in one package.
+The pre-release package migration changes public imports and binary names, but not behavior;
+implementation classes remain in `.internal` with their existing visibility.
+
 | Component | Responsibility |
 |---|---|
 | `HttpJevClient` | Endpoint specifications, admission, outstanding-call registry, OPEN/CLOSING/CLOSED phase, deadline scheduler lifetime, and resource shutdown |

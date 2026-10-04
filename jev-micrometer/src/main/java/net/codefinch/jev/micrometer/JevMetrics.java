@@ -12,12 +12,12 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import net.codefinch.jev.Answer;
 import net.codefinch.jev.CallObserver;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * A {@link CallObserver} that records Micrometer meters.

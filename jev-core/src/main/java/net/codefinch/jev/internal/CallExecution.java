@@ -19,12 +19,12 @@ import java.util.function.Supplier;
 import net.codefinch.jev.CallObserver;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.RetryPolicy;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.exception.JevApiException;
 import net.codefinch.jev.exception.JevDeadlineExceededException;
 import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.exception.JevInterruptedException;
 import net.codefinch.jev.exception.JevRateLimitException;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * One admitted operation: retry/deadline policy, atomic attempt and terminal decisions,

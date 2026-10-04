@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.model;
 
 /**
  * The answer to a {@link NoulQuestion}: the probability of yes. A noul has no separate confidence,

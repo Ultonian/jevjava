@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.OptionalInt;
 import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * Receives one event per HTTP attempt and one per call, for metrics and tracing. Register with

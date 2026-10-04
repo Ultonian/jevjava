@@ -18,19 +18,19 @@ import java.util.concurrent.locks.LockSupport;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.ModelList;
-import net.codefinch.jev.ModelMetadata;
 import net.codefinch.jev.RequestOptions;
-import net.codefinch.jev.ResponseMetadata;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.ModelMetadata;
+import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * An in-memory {@link JevClient} for tests. Each {@code systemOne} call is answered, in order, by
  * the next scripted response, exception, or responder; when the script is empty, by the default
- * responder ({@link ScriptedAnswers#neutralResponse(net.codefinch.jev.Questions)} unless replaced).
- * Every call is recorded with its request and options.
+ * responder ({@link ScriptedAnswers#neutralResponse(net.codefinch.jev.model.Questions)} unless
+ * replaced). Every call is recorded with its request and options.
  *
  * <p>Lifecycle follows the {@link JevClient} contract the HTTP client implements: synchronous calls
  * run on the caller's thread; asynchronous calls run their responder on an executor (a fresh

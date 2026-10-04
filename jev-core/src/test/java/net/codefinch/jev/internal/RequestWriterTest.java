@@ -11,16 +11,16 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
 import net.codefinch.jev.Fixtures;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.ScoreQuestion;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneRequest;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ScoreQuestion;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
 import org.junit.jupiter.api.Test;
 
 class RequestWriterTest {

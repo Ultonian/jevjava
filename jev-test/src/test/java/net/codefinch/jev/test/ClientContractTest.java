@@ -16,11 +16,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 

@@ -5,14 +5,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.NoulThreshold;
 import net.codefinch.jev.test.RecordingJevClient;
 import net.codefinch.jev.test.ScriptedAnswers;
@@ -116,7 +116,7 @@ public final class LineSearch {
         .enqueue(req -> hit(req.questions(), "L2", 0.31, 0.08));
   }
 
-  private static net.codefinch.jev.SystemOneResponse hit(
+  private static net.codefinch.jev.model.SystemOneResponse hit(
       Questions q, String line, double p, double exists) {
     ChoiceQuestion where = (ChoiceQuestion) q.asMap().get("where");
     return ScriptedAnswers.neutral(q)

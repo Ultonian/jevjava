@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.model;
 
 import java.util.Collections;
 import java.util.List;

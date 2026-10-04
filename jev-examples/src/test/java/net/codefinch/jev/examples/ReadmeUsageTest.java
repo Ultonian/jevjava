@@ -8,22 +8,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.Questions;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.RetryPolicy;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.exception.JevApiException;
 import net.codefinch.jev.exception.JevRateLimitException;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 import net.codefinch.jev.test.RecordingJevClient;
 import net.codefinch.jev.test.ScriptedAnswers;
 import org.junit.jupiter.api.Test;
@@ -111,7 +111,7 @@ class ReadmeUsageTest {
   // ---------------------------------------------------------------
   @Test
   void perCallOptionsAndModels() {
-    Questions questions = Questions.of("q", net.codefinch.jev.NoulQuestion.of("?"));
+    Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));
     State state = State.of("s");
     try (RecordingJevClient client = new RecordingJevClient()) {
       SystemOneRequest request = SystemOneRequest.of(state, questions).withModel("jev-preview");
@@ -135,7 +135,7 @@ class ReadmeUsageTest {
   // ------------------------------------------------------------------------------------
   @Test
   void async() throws Exception {
-    Questions questions = Questions.of("q", net.codefinch.jev.NoulQuestion.of("?"));
+    Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));
     State state = State.of("s");
     try (RecordingJevClient client = new RecordingJevClient()) {
       CompletableFuture<SystemOneResponse> future = client.systemOneAsync(state, questions);
@@ -159,7 +159,7 @@ class ReadmeUsageTest {
   // -------------------------------------------------------------------------
   @Test
   void errorsAndRetries() {
-    Questions questions = Questions.of("q", net.codefinch.jev.NoulQuestion.of("?"));
+    Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));
     State state = State.of("s");
     StringBuilder log = new StringBuilder();
     try (RecordingJevClient client = new RecordingJevClient()) {
@@ -200,8 +200,8 @@ class ReadmeUsageTest {
 
   private static RecordingJevClient scripted(Questions questions) {
     ChoiceQuestion dept = (ChoiceQuestion) questions.asMap().get("department");
-    net.codefinch.jev.ScoreQuestion sev =
-        (net.codefinch.jev.ScoreQuestion) questions.asMap().get("severity");
+    net.codefinch.jev.model.ScoreQuestion sev =
+        (net.codefinch.jev.model.ScoreQuestion) questions.asMap().get("severity");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(questions)

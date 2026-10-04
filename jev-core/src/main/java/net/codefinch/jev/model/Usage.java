@@ -1,4 +1,4 @@
-package net.codefinch.jev;
+package net.codefinch.jev.model;
 
 /**
  * Token usage for one request. Both counters are required by the API schema; a response missing

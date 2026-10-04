@@ -16,25 +16,25 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import net.codefinch.jev.Answer;
-import net.codefinch.jev.ChoiceCriteria;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.ModelList;
-import net.codefinch.jev.ModelMetadata;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.NoulQuestion;
-import net.codefinch.jev.Questions;
 import net.codefinch.jev.RequestOptions;
-import net.codefinch.jev.ResponseMetadata;
-import net.codefinch.jev.ScoreQuestion;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.exception.JevRateLimitException;
 import net.codefinch.jev.internal.Json;
 import net.codefinch.jev.internal.ResponseParser;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.ModelMetadata;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.NoulQuestion;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.ScoreQuestion;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.api.Test;
 
 class RecordingJevClientTest {
@@ -508,8 +508,8 @@ class RecordingJevClientTest {
     assertThat(parsed.answers()).isEqualTo(built.answers());
     assertThat(parsed.requestId()).contains("req-1");
     Map<String, Answer> answers = parsed.answers().asMap();
-    assertThat(answers.get("sev")).isInstanceOf(net.codefinch.jev.ScoreAnswer.class);
-    assertThat(((net.codefinch.jev.ScoreAnswer) answers.get("sev")).legend().get(1))
+    assertThat(answers.get("sev")).isInstanceOf(net.codefinch.jev.model.ScoreAnswer.class);
+    assertThat(((net.codefinch.jev.model.ScoreAnswer) answers.get("sev")).legend().get(1))
         .isEqualTo(Content.of("high"));
 
     ModelList models = new RecordingJevClient().models();

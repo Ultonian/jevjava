@@ -2,11 +2,11 @@ package net.codefinch.jev.benchmarks.components;
 
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
 import net.codefinch.jev.internal.RequestWriter;
 import net.codefinch.jev.internal.ResponseParser;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;

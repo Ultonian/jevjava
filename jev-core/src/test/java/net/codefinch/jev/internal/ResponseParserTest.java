@@ -5,16 +5,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.Map;
-import net.codefinch.jev.Answer;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.Content;
 import net.codefinch.jev.Fixtures;
-import net.codefinch.jev.ModelList;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.exception.JevMissingAnswerException;
 import net.codefinch.jev.exception.JevResponseValidationException;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -65,7 +65,7 @@ class ResponseParserTest {
   void unknownFieldsAreIgnored() {
     SystemOneResponse r = parse(Fixtures.read("responses/python-unknown-fields.json"));
     assertThat(r.answers().noul("spam").noul()).isEqualTo(0.9);
-    assertThat(r.usage()).isEqualTo(new net.codefinch.jev.Usage(1, 1));
+    assertThat(r.usage()).isEqualTo(new net.codefinch.jev.model.Usage(1, 1));
   }
 
   /** typesafe-sdk-python tests/test_responses.py: unknown answer types are dropped, not fatal. */

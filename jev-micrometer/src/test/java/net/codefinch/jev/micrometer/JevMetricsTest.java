@@ -13,17 +13,17 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.Set;
-import net.codefinch.jev.Answer;
-import net.codefinch.jev.Answers;
 import net.codefinch.jev.CallObserver;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.ResponseMetadata;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.SystemOneResponse;
-import net.codefinch.jev.Usage;
 import net.codefinch.jev.exception.JevInternalServerException;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.SystemOneResponse;
+import net.codefinch.jev.model.Usage;
 import org.junit.jupiter.api.Test;
 
 class JevMetricsTest {

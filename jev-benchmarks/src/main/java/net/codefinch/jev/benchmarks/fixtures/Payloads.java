@@ -13,11 +13,11 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.internal.Json;
 import net.codefinch.jev.internal.RequestWriter;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
 
 /** Deterministic synthetic workloads with independent content-size and question-count axes. */
 public final class Payloads {
@@ -111,7 +111,7 @@ public final class Payloads {
       }
     }
     return SystemOneRequest.of(
-        State.of(net.codefinch.jev.Content.fromJson(content)), questions.build());
+        State.of(net.codefinch.jev.model.Content.fromJson(content)), questions.build());
   }
 
   /** Success response derived from the copied all-three fixture, with matching question IDs. */

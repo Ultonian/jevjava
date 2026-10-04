@@ -6,9 +6,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
-import net.codefinch.jev.ChoiceQuestion;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.SystemOneRequest;
+import net.codefinch.jev.model.ChoiceQuestion;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.SystemOneRequest;
 import net.codefinch.jev.test.RecordingJevClient;
 import org.junit.jupiter.api.Test;
 
@@ -131,8 +131,8 @@ class ExamplesTest {
   /** R3 finding 4: CONFIRM never produces an automatic outcome, at both gate boundaries. */
   @Test
   void entityAlignmentRespectsTheConfirmBand() {
-    net.codefinch.jev.ScoreQuestion link =
-        (net.codefinch.jev.ScoreQuestion) EntityAlignment.QUESTIONS.asMap().get("link_state");
+    net.codefinch.jev.model.ScoreQuestion link =
+        (net.codefinch.jev.model.ScoreQuestion) EntityAlignment.QUESTIONS.asMap().get("link_state");
     double[][] cases = {{0.49, 0}, {0.5, 1}, {0.699, 1}, {0.7, 2}};
     String[] expected = {
       "curator queue (uncertain)",

@@ -8,18 +8,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import net.codefinch.jev.Answer;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ChoiceAnswer;
-import net.codefinch.jev.Content;
-import net.codefinch.jev.ModelList;
-import net.codefinch.jev.ModelMetadata;
-import net.codefinch.jev.NoulAnswer;
-import net.codefinch.jev.ResponseMetadata;
-import net.codefinch.jev.ScoreAnswer;
-import net.codefinch.jev.SystemOneResponse;
-import net.codefinch.jev.Usage;
 import net.codefinch.jev.exception.JevResponseValidationException;
+import net.codefinch.jev.model.Answer;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceAnswer;
+import net.codefinch.jev.model.Content;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.ModelMetadata;
+import net.codefinch.jev.model.NoulAnswer;
+import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.ScoreAnswer;
+import net.codefinch.jev.model.SystemOneResponse;
+import net.codefinch.jev.model.Usage;
 
 /**
  * Parses successful response bodies against the API schema.

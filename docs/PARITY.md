@@ -6,6 +6,8 @@ is independently maintained and is not affiliated with, endorsed by, or supporte
 
 Start with the [usage examples](../README.md#usage). The upstream comparisons below refer to
 [pinned versions](#pinned-references), not a claim of parity with every subsequent upstream release.
+Request and response data types live in `net.codefinch.jev.model`; client configuration lives in
+`net.codefinch.jev`. See the [package guide](../README.md#packages) when updating an older snapshot.
 
 ## Requests and validation
 

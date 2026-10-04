@@ -4,7 +4,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
 import net.codefinch.jev.RequestOptions;
-import net.codefinch.jev.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneRequest;
 
 /**
  * One call the {@link RecordingJevClient} received, in order.

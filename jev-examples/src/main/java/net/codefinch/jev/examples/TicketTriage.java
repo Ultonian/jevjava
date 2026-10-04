@@ -3,13 +3,13 @@ package net.codefinch.jev.examples;
 import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
-import net.codefinch.jev.Answers;
-import net.codefinch.jev.ChoiceCriteria;
 import net.codefinch.jev.JevClient;
-import net.codefinch.jev.NoulCriteria;
-import net.codefinch.jev.Questions;
-import net.codefinch.jev.State;
-import net.codefinch.jev.SystemOneResponse;
+import net.codefinch.jev.model.Answers;
+import net.codefinch.jev.model.ChoiceCriteria;
+import net.codefinch.jev.model.NoulCriteria;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneResponse;
 import net.codefinch.jev.patterns.Composite;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.patterns.NoulThreshold;
@@ -124,8 +124,8 @@ public final class TicketTriage {
 
   /** A fake with answers shaped like the real ones, so the example runs without a key. */
   static RecordingJevClient scripted() {
-    var dept = (net.codefinch.jev.ChoiceQuestion) QUESTIONS.asMap().get("department");
-    var sev = (net.codefinch.jev.ScoreQuestion) QUESTIONS.asMap().get("severity");
+    var dept = (net.codefinch.jev.model.ChoiceQuestion) QUESTIONS.asMap().get("department");
+    var sev = (net.codefinch.jev.model.ScoreQuestion) QUESTIONS.asMap().get("severity");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)

@@ -37,9 +37,20 @@ git clone https://github.com/Ultonian/jevjavauosdk && cd jevjavauosdk && ./mvnw 
 Core usage examples are exercised in CI by
 [`ReadmeUsageTest`](jev-examples/src/test/java/net/codefinch/jev/examples/ReadmeUsageTest.java).
 Snippets omit imports and application-specific callbacks such as `route` and `suggest`.
-Client and request types are in `net.codefinch.jev`; routing helpers are in
-`net.codefinch.jev.patterns`.
-SDK-specific exceptions are in `net.codefinch.jev.exception`.
+
+### Packages
+
+| Package | Use it for |
+|---|---|
+| `net.codefinch.jev` | `JevClient`, `JevClientBuilder`, `RequestOptions`, `RetryPolicy`, `CallObserver` |
+| `net.codefinch.jev.model` | Request/response data: `State`, `Content`, `Questions`, criteria, answers, usage and model metadata |
+| `net.codefinch.jev.exception` | SDK-specific `Jev…Exception` types |
+| `net.codefinch.jev.patterns` | Routing thresholds, confidence gates, composites and fan-out |
+
+`net.codefinch.jev.internal` contains implementation details and is not a supported application API.
+Earlier snapshots placed the model and exception types directly in `net.codefinch.jev`. Update
+those imports and rebuild dependent applications; this pre-release move changes binary names.
+Maven coordinates, class names and behavior are unchanged.
 
 ### Create a client
 

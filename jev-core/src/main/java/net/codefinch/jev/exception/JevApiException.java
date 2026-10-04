@@ -5,8 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TreeMap;
-import net.codefinch.jev.ResponseMetadata;
 import net.codefinch.jev.internal.ErrorMessages;
+import net.codefinch.jev.model.ResponseMetadata;
 
 /**
  * The server answered with an HTTP status outside 2xx, or with a 2xx body that failed validation.

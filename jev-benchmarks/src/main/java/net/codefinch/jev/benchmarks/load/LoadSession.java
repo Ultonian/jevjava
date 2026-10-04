@@ -20,12 +20,12 @@ import net.codefinch.jev.JevClient;
 import net.codefinch.jev.JevClientBuilder;
 import net.codefinch.jev.RequestOptions;
 import net.codefinch.jev.RetryPolicy;
-import net.codefinch.jev.SystemOneRequest;
-import net.codefinch.jev.SystemOneResponse;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
 import net.codefinch.jev.benchmarks.server.LoopbackServer;
 import net.codefinch.jev.internal.RequestWriter;
 import net.codefinch.jev.micrometer.JevMetrics;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /** One owned client/server lifetime, sharing prepared input across separate drained cohorts. */
 public final class LoadSession implements AutoCloseable {

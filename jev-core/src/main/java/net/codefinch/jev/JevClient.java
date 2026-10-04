@@ -4,6 +4,11 @@ import java.util.concurrent.CompletableFuture;
 import net.codefinch.jev.exception.JevDeadlineExceededException;
 import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.exception.JevInterruptedException;
+import net.codefinch.jev.model.ModelList;
+import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.State;
+import net.codefinch.jev.model.SystemOneRequest;
+import net.codefinch.jev.model.SystemOneResponse;
 
 /**
  * A client for the Jev System One API. Implemented by the HTTP client and by the recording fake in

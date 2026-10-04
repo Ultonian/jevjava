@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.RetryPolicy;
-import net.codefinch.jev.SystemOneRequest;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
 import net.codefinch.jev.internal.RequestWriter;
+import net.codefinch.jev.model.SystemOneRequest;
 
 /**
  * SDK lifecycle experiment without a server, socket, observer or replacement SDK implementation.
