@@ -164,7 +164,7 @@ class JevClientBuilderTest {
 
   /**
    * Python 0.7.1: a key with internal whitespace, control or non-ASCII characters is rejected when
-   * the client is built, and the error never contains the key (message, causes or stack trace).
+   * The client is built, and the error never contains the key (message, causes or stack trace).
    */
   @ParameterizedTest(name = "{0} U+{1}")
   @CsvSource({

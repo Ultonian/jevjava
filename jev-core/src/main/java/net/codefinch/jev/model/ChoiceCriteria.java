@@ -14,6 +14,8 @@ import net.codefinch.jev.exception.JevBadRequestException;
  * <p>The server requires at least one option and accepts at most 255, rejecting both violations
  * with HTTP 400 ({@link JevBadRequestException}); like both official SDKs, neither bound is checked
  * client-side.
+ *
+ * @since 0.1.0
  */
 public final class ChoiceCriteria {
   private final Map<String, Content> options;
@@ -75,7 +77,11 @@ public final class ChoiceCriteria {
     };
   }
 
-  /** Builds {@link ChoiceCriteria} one option at a time. */
+  /**
+   * Builds {@link ChoiceCriteria} one option at a time.
+   *
+   * @since 0.1.0
+   */
   public static final class Builder {
     private final Map<String, Content> options = new LinkedHashMap<>();
 

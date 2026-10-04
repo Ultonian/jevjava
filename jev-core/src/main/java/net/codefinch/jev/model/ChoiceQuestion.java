@@ -8,6 +8,7 @@ import java.util.Optional;
  *
  * @param instructions the question; see {@link Question#instructions()}
  * @param criteria the options; required by the API
+ * @since 0.1.0
  */
 public record ChoiceQuestion(Optional<Content> instructions, ChoiceCriteria criteria)
     implements Question {

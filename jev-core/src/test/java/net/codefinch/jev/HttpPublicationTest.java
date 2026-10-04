@@ -60,7 +60,7 @@ class HttpPublicationTest {
     }
   }
 
-  /** Review P1: the deadline must cover executor queueing and expire independently of it. */
+  /** The deadline must cover executor queueing and expire independently of it. */
   @Test
   void queuedCallExpiresAtTheDeadlineWhileTheExecutorIsStillBlocked() throws Exception {
     server.enqueueJson(200, MODELS).enqueueJson(200, MODELS);
@@ -97,7 +97,7 @@ class HttpPublicationTest {
     }
   }
 
-  /** Fix-review P1(1): a blocking application callback must not stall other calls' deadlines. */
+  /** A blocking application callback must not stall other calls' deadlines. */
   @Test
   void blockingCallbackDoesNotBlockOtherDeadlines() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
@@ -130,7 +130,7 @@ class HttpPublicationTest {
     assertThat(server.requests()).isEmpty();
   }
 
-  /** Fix-review P1(2): close() stays bounded even when a completion callback blocks. */
+  /** {@code close()} stays bounded even when a completion callback blocks. */
   @Test
   void closeIsBoundedDespiteBlockingCallback() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
@@ -166,9 +166,7 @@ class HttpPublicationTest {
     }
   }
 
-  /**
-   * Fix-review P1(3): cancellation kills the exchange before callbacks, so no retry can slip out.
-   */
+  /** Cancellation kills the exchange before callbacks, so no retry can slip out. */
   @Test
   void cancelPreventsRetryWhileTheCancellationCallbackIsBlocked() throws Exception {
     server
@@ -201,7 +199,7 @@ class HttpPublicationTest {
     }
   }
 
-  /** R3 P2(1), deterministic: close() must not return until queued results are published. */
+  /** {@code close()} must not return until queued results are published. */
   @ParameterizedTest(name = "grace={0}ms")
   @CsvSource({"0", "50"})
   void closeWaitsForPublicationButNotForCallbacks(long graceMillis) throws Exception {
@@ -236,7 +234,7 @@ class HttpPublicationTest {
     }
   }
 
-  /** R3 P2(1), the reviewer's probe with real delivery: never pending after close returns. */
+  /** Results are never pending after close returns. */
   @Test
   void resultsAreAlwaysTerminalWhenCloseReturns() throws Exception {
     CountDownLatch occupied = new CountDownLatch(1);
@@ -267,9 +265,7 @@ class HttpPublicationTest {
     assertThat(server.requests()).isEmpty();
   }
 
-  /**
-   * R3 P2(2): every completion (deadline, failure, success) is published on an SDK virtual thread.
-   */
+  /** Every completion (deadline, failure, success) is published on an SDK virtual thread. */
   @Test
   void completionsArePublishedOnSdkVirtualThreadsForEveryOutcome() throws Exception {
     server.enqueueJson(500, "{}").enqueueJson(200, MODELS);
@@ -307,10 +303,7 @@ class HttpPublicationTest {
     }
   }
 
-  /**
-   * R3 P2(2): a delivery that rejects, or a close() in the hand-off gap, never runs callbacks
-   * inline.
-   */
+  /** A delivery that rejects, or a close() in the hand-off gap, never runs callbacks inline. */
   @Test
   void rejectedDeliveryAndCloseInTheHandoffGapStillPublishOnVirtualThreads() throws Exception {
     // A delivery executor that rejects once released: the SDK must fall back to a fresh virtual

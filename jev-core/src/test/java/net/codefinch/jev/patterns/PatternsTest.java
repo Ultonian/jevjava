@@ -45,7 +45,7 @@ class PatternsTest {
     return new ScoreAnswer(score, legend, probabilities, confidence);
   }
 
-  // ---- ConfidenceGate ---------------------------------------------------------------------
+  // ConfidenceGate
 
   @ParameterizedTest
   @CsvSource({
@@ -80,7 +80,7 @@ class PatternsTest {
     assertThat(ConfidenceGate.of(0.0, 1.0).decide(0.0)).isEqualTo(ConfidenceGate.Decision.CONFIRM);
   }
 
-  // ---- NoulThreshold ----------------------------------------------------------------------
+  // NoulThreshold
 
   @ParameterizedTest
   @CsvSource({"0.0, NO", "0.2, NO", "0.21, UNSURE", "0.79, UNSURE", "0.8, YES", "1.0, YES"})
@@ -102,7 +102,7 @@ class PatternsTest {
         .hasMessageContaining("probability");
   }
 
-  // ---- Composite --------------------------------------------------------------------------
+  // Composite
 
   @Test
   void compositeIsNormalisedWeightedAverage() {
@@ -123,7 +123,7 @@ class PatternsTest {
     assertThat(Composite.normalised(score(5.0, 3, 1.0))).as("clamped").isEqualTo(1.0);
   }
 
-  /** Phase 3 review P2: accepted finite weights must never overflow or underflow the mean. */
+  /** Accepted finite weights must never overflow or underflow the mean. */
   @Test
   void compositeIsScaleInvariantAndFiniteAtBothExtremes() {
     Answers half = Answers.of(Map.of("a", score(0.5, 2, 1), "b", score(0.5, 2, 1)));
@@ -162,7 +162,7 @@ class PatternsTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  // ---- FanOut -----------------------------------------------------------------------------
+  // FanOut
 
   @Test
   void fanOutBindsEachItemStructurallyIntoItsInstructions() {

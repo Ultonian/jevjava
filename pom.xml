@@ -134,6 +134,7 @@
               required where the one-line summary already says it ("-missing"); records carry @param
               on the type. Bound to verify below so the policy is actually enforced.
             -->
+            <excludePackageNames>net.codefinch.jev.internal:net.codefinch.jev.internal.*</excludePackageNames>
             <failOnWarnings>true</failOnWarnings>
             <doclint>all,-missing</doclint>
             <quiet>true</quiet>

@@ -155,7 +155,7 @@ class RecordingJevClientTest {
     }
   }
 
-  // ---- Phase 3 review P2: the fake keeps the interface's lifecycle contract -------------------
+  // the fake keeps the interface's lifecycle contract
 
   @Test
   void closedClientRejectsSyncAndAsyncCallsImmediatelyLikeTheHttpClient() {
@@ -241,9 +241,7 @@ class RecordingJevClientTest {
     }
   }
 
-  /**
-   * R2 finding 1: a call admitted before close() is always visible to it, for both async methods.
-   */
+  /** A call admitted before close() is always visible to it, for both async methods. */
   @Test
   void asyncCallsAdmittedBeforeCloseAreCancelledByItAndNeverRunAfterwards() throws Exception {
     CapturingExecutor executor = new CapturingExecutor();
@@ -297,9 +295,7 @@ class RecordingJevClientTest {
         .allMatch(CompletableFuture::isCancelled);
   }
 
-  /**
-   * R2 finding 2: completions are published off the closing thread and off the responder executor.
-   */
+  /** completions are published off the closing thread and off the responder executor. */
   @Test
   void closeDoesNotRunContinuationsOnTheClosingThreadNorWaitForThem() throws Exception {
     CapturingExecutor executor = new CapturingExecutor();
@@ -357,7 +353,7 @@ class RecordingJevClientTest {
     }
   }
 
-  /** R3 finding 3: close() on a virtual thread must not starve its own publication threads. */
+  /** {@code close()} on a virtual thread must not starve its own publication threads. */
   @Test
   void closeOnVirtualThreadPublishesWithOneCarrier() throws Exception {
     // The module's surefire argLine pins the virtual-thread scheduler to a single carrier.
@@ -386,10 +382,10 @@ class RecordingJevClientTest {
   }
 
   /**
-   * R3 finding 3 / R4 follow-up: publication is held deterministically by occupying the scheduler's
-   * only carrier (the module's surefire argLine pins parallelism and maxPoolSize to 1), so the
-   * closer must park; interrupting it there throws and reasserts the flag, and publication still
-   * completes once the carrier is released.
+   * Publication is held deterministically by occupying the scheduler's only carrier (the module's
+   * surefire argLine pins parallelism and maxPoolSize to 1), so the closer must park; interrupting
+   * it there throws and reasserts the flag, and publication still completes once the carrier is
+   * released.
    */
   @Test
   void closeInterruptedWhilePublicationIsHeldThrowsAndReasserts() throws Exception {
@@ -445,7 +441,7 @@ class RecordingJevClientTest {
     assertThat(queued.isCancelled()).isTrue();
   }
 
-  /** Phase 3 review P2: lastCall() must read one snapshot even while reset() races it. */
+  /** {@code lastCall()} must read one snapshot even while reset() races it. */
   @Test
   void lastCallNeverThrowsWhileResetRaces() throws Exception {
     try (RecordingJevClient c = new RecordingJevClient()) {
@@ -480,7 +476,7 @@ class RecordingJevClientTest {
     }
   }
 
-  /** Phase 3 review P2: scripted raw bodies are real wire JSON that the core parser accepts. */
+  /** scripted raw bodies are real wire JSON that the core parser accepts. */
   @Test
   void scriptedRawBodiesRoundTripThroughTheCoreParser() throws Exception {
     Questions q =

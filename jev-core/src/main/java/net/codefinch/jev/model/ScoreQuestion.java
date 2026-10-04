@@ -18,6 +18,7 @@ import net.codefinch.jev.exception.JevBadRequestException;
  *
  * @param instructions the question; see {@link Question#instructions()}
  * @param criteria at least two non-null level descriptions, lowest first
+ * @since 0.1.0
  */
 public record ScoreQuestion(Optional<Content> instructions, List<Content> criteria)
     implements Question {

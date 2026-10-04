@@ -2,7 +2,11 @@ package net.codefinch.jev.model;
 
 import java.util.Optional;
 
-/** One question in a request. Exactly one of the three System One primitives. */
+/**
+ * One question in a request. Exactly one of the three System One primitives.
+ *
+ * @since 0.1.0
+ */
 public sealed interface Question permits NoulQuestion, ChoiceQuestion, ScoreQuestion {
 
   /** The wire {@code type} discriminator: {@code noul}, {@code choice} or {@code score}. */

@@ -13,6 +13,8 @@ import java.util.Set;
  *
  * <p>Never empty: the API requires at least one question, and both official SDKs reject an empty
  * set before sending.
+ *
+ * @since 0.1.0
  */
 public final class Questions {
   private final Map<String, Question> byId;
@@ -68,13 +70,22 @@ public final class Questions {
     return "Questions" + byId;
   }
 
-  /** Builds a {@link Questions} set. */
+  /**
+   * Builds a {@link Questions} set.
+   *
+   * @since 0.1.0
+   */
   public static final class Builder {
     private final Map<String, Question> byId = new LinkedHashMap<>();
 
     private Builder() {}
 
-    /** Adds any question. */
+    /**
+     * Adds any question.
+     *
+     * @throws NullPointerException if id or question is null
+     * @throws IllegalArgumentException if id is blank or already present
+     */
     public Builder put(String id, Question question) {
       Objects.requireNonNull(id, "id");
       Objects.requireNonNull(question, "question");
@@ -112,7 +123,11 @@ public final class Questions {
       return put(id, ScoreQuestion.of(instructions, levels));
     }
 
-    /** Finishes the set; fails if it is empty. */
+    /**
+     * Finishes the set; fails if it is empty.
+     *
+     * @throws IllegalArgumentException if no question has been added
+     */
     public Questions build() {
       if (byId.isEmpty()) {
         throw new IllegalArgumentException("at least one question is required");

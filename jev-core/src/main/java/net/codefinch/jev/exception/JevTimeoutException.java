@@ -3,6 +3,8 @@ package net.codefinch.jev.exception;
 /**
  * One attempt exceeded its per-attempt timeout (headers or body delivery). Retried by default.
  * Mirrors upstream {@code TypeSafeAPITimeoutError}, which is likewise a connection error.
+ *
+ * @since 0.1.0
  */
 public class JevTimeoutException extends JevConnectionException {
   private static final long serialVersionUID = 1L;

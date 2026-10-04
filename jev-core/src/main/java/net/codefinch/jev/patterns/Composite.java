@@ -12,6 +12,8 @@ import net.codefinch.jev.model.ScoreAnswer;
  * question contributes in {@code [0, 1]}), multiplied by its weight, summed, and divided by the sum
  * of the weights. The result is in {@code [0, 1]} and comparable across items that were scored with
  * the same questions.
+ *
+ * @since 0.1.0
  */
 public final class Composite {
   private final Map<String, Double> weights;

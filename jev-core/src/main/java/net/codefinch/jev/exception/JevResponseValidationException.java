@@ -7,6 +7,8 @@ import java.util.Map;
  * A 2xx response whose body does not match the API schema: not JSON, a required field missing or of
  * the wrong type, or an answer of a known type that is malformed. Carries the dotted path of the
  * offending field. Mirrors upstream {@code TypeSafeAPIResponseValidationError}.
+ *
+ * @since 0.1.0
  */
 public class JevResponseValidationException extends JevApiException {
   private static final long serialVersionUID = 1L;

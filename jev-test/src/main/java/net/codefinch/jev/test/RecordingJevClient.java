@@ -44,6 +44,8 @@ import net.codefinch.jev.model.SystemOneResponse;
  *   <li>Close publishes {@link CancellationException} to outstanding futures and waits only for
  *       publication, never for continuations. Late responder results are discarded.
  * </ul>
+ *
+ * @since 0.1.0
  */
 public final class RecordingJevClient implements JevClient {
 

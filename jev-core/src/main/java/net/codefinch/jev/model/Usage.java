@@ -7,5 +7,6 @@ package net.codefinch.jev.model;
  *
  * @param inputTokens billable input tokens used to evaluate the request
  * @param outputTokens output tokens used to answer the questions
+ * @since 0.1.0
  */
 public record Usage(long inputTokens, long outputTokens) {}

@@ -5,6 +5,8 @@ import net.codefinch.jev.model.Answers;
 /**
  * A typed accessor on {@link Answers} was called for an id whose answer is a different primitive.
  * Java-only.
+ *
+ * @since 0.1.0
  */
 public class JevAnswerTypeException extends JevException {
   private static final long serialVersionUID = 1L;

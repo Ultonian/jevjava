@@ -12,6 +12,7 @@ import java.util.Optional;
  * @param answers the answers by question id
  * @param usage token usage
  * @param metadata request id, headers and raw body
+ * @since 0.1.0
  */
 public record SystemOneResponse(
     String model, Answers answers, Usage usage, ResponseMetadata metadata) {

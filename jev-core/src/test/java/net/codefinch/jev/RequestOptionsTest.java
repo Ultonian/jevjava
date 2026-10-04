@@ -42,7 +42,7 @@ class RequestOptionsTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  /** Review P2: the plan's "zero disables the deadline" needs a per-call representation. */
+  /** Zero explicitly disables a per-call deadline instead of inheriting the client deadline. */
   @Test
   void deadlineHasThreeStatesInheritDisabledAndSet() {
     assertThat(RequestOptions.NONE.deadline()).isEmpty();

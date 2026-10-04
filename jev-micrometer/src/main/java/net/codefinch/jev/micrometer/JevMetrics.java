@@ -40,6 +40,8 @@ import net.codefinch.jev.model.SystemOneResponse;
  * <p>Tag values are bounded: {@code operation} has two values, {@code outcome} four, {@code status}
  * the HTTP statuses seen (or {@code n/a}), {@code attempt} is capped by the retry policy, and
  * {@code model} is the versioned model id returned by the server (or {@code unknown}).
+ *
+ * @since 0.1.0
  */
 public final class JevMetrics implements CallObserver {
   private final MeterRegistry registry;
@@ -142,7 +144,11 @@ public final class JevMetrics implements CallObserver {
     return status < 0 ? "n/a" : Integer.toString(status);
   }
 
-  /** Builds {@link JevMetrics}. */
+  /**
+   * Builds {@link JevMetrics}.
+   *
+   * @since 0.1.0
+   */
   public static final class Builder {
     private final MeterRegistry registry;
     private String prefix = "jev";

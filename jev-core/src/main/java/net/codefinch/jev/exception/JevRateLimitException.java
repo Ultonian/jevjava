@@ -10,6 +10,8 @@ import net.codefinch.jev.internal.RetryAfter;
  * HTTP 429: the account's rate limit was exceeded. Exposes the server-suggested delay from {@code
  * retry-after-ms} (preferred) or {@code retry-after}, if either is present and valid. Mirrors
  * upstream {@code TypeSafeRateLimitError}.
+ *
+ * @since 0.1.0
  */
 public class JevRateLimitException extends JevApiException {
   private static final long serialVersionUID = 1L;

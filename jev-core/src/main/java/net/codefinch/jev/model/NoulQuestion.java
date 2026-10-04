@@ -8,6 +8,7 @@ import java.util.Optional;
  *
  * @param instructions the question; see {@link Question#instructions()}
  * @param criteria optional yes/no descriptions; empty omits the {@code criteria} key
+ * @since 0.1.0
  */
 public record NoulQuestion(Optional<Content> instructions, Optional<NoulCriteria> criteria)
     implements Question {

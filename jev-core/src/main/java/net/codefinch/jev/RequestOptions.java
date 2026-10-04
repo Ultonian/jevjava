@@ -24,6 +24,7 @@ import net.codefinch.jev.model.SystemOneRequest;
  * @param retry a partial override of the client's retry policy for this call, applied to the
  *     client's policy (e.g. {@code p -> p.withMaxRetries(0)}); replace it wholesale with {@code p
  *     -> other}
+ * @since 0.1.0
  */
 public record RequestOptions(
     Optional<Duration> timeout,
@@ -65,7 +66,11 @@ public record RequestOptions(
     }
   }
 
-  /** Builds {@link RequestOptions}. */
+  /**
+   * Builds {@link RequestOptions}.
+   *
+   * @since 0.1.0
+   */
   public static final class Builder {
     private Duration timeout;
     private Duration deadline;

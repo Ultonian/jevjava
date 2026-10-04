@@ -21,10 +21,12 @@ import net.codefinch.jev.model.SystemOneResponse;
  *
  * <h2>Timeouts and deadline</h2>
  *
- * <p>The per-attempt timeout (default 10 s, as upstream) covers headers and body delivery of one
- * HTTP attempt. The operation deadline (default 30 s; Java-only) covers everything from submission
- * through every attempt and backoff sleep; at expiry the in-flight attempt is cancelled and the
- * call fails with {@link JevDeadlineExceededException}.
+ * <p>For the HTTP implementation, the per-attempt timeout (default 10 s, as upstream) covers
+ * headers and body delivery of one HTTP attempt. The operation deadline (default 30 s; Java-only)
+ * covers everything from submission through every attempt and backoff sleep; at expiry the
+ * in-flight attempt is cancelled and the call fails with {@link JevDeadlineExceededException}. The
+ * recording fake retains per-call options but does not simulate HTTP retry, timeout or deadline
+ * behaviour.
  *
  * <h2>Cancellation and interruption</h2>
  *
@@ -63,56 +65,157 @@ import net.codefinch.jev.model.SystemOneResponse;
  * builder; the total bound is grace period plus publication timeout.
  *
  * <p>This holds for every invocation, not only the first: a concurrent or repeated {@code close()}
- * waits (within the same total bound) for the shutdown started by the first caller, then re-checks
- * that every future is done — waiting up to the publication timeout again if some are not — and
- * throws under the same rules. Resources are shut down exactly once.
+ * waits for the shutdown started by the first caller, then re-checks that every future is done.
+ * Both waits share one grace-plus-publication budget measured from this caller's start; the second
+ * wait also cannot exceed the publication timeout. Failure or interruption throws under the same
+ * rules. Resources are shut down exactly once.
+ *
+ * @since 0.1.0
  */
 public interface JevClient extends AutoCloseable {
 
-  /** Answers the questions synchronously with the client's default model. */
+  /**
+   * Answers the questions synchronously with the client's default model.
+   *
+   * @throws IllegalStateException if the client is closing or closed
+   * @throws JevInterruptedException if the calling thread is interrupted; its interrupt flag is
+   *     restored
+   * @throws JevException if the operation fails, including HTTP, transport, response-validation or
+   *     deadline failures
+   * @throws java.util.concurrent.CancellationException if shutdown cancels the in-flight call
+   * @throws NullPointerException if a required argument is null
+   */
   default SystemOneResponse systemOne(State state, Questions questions) {
     return systemOne(SystemOneRequest.of(state, questions));
   }
 
-  /** Answers the questions synchronously. */
+  /**
+   * Answers the questions synchronously.
+   *
+   * @throws IllegalStateException if the client is closing or closed
+   * @throws JevInterruptedException if the calling thread is interrupted; its interrupt flag is
+   *     restored
+   * @throws JevException if the operation fails, including HTTP, transport, response-validation or
+   *     deadline failures
+   * @throws java.util.concurrent.CancellationException if shutdown cancels the in-flight call
+   * @throws NullPointerException if a required argument is null
+   */
   default SystemOneResponse systemOne(SystemOneRequest request) {
     return systemOne(request, RequestOptions.NONE);
   }
 
-  /** Answers the questions synchronously with per-call HTTP options. */
+  /**
+   * Answers the questions synchronously with per-call HTTP options.
+   *
+   * @throws IllegalStateException if the client is closing or closed
+   * @throws JevInterruptedException if the calling thread is interrupted; its interrupt flag is
+   *     restored
+   * @throws JevException if the operation fails, including HTTP, transport, response-validation or
+   *     deadline failures
+   * @throws java.util.concurrent.CancellationException if shutdown cancels the in-flight call
+   * @throws NullPointerException if a required argument is null
+   */
   SystemOneResponse systemOne(SystemOneRequest request, RequestOptions options);
 
-  /** Answers the questions asynchronously with the client's default model. */
+  /**
+   * Answers the questions asynchronously with the client's default model.
+   *
+   * <p>HTTP, transport, response-validation and deadline failures complete the returned future
+   * exceptionally with {@link JevException}. Cancellation is terminal. See the class documentation
+   * for callback threading.
+   *
+   * @throws IllegalStateException immediately if the client is closing or closed
+   * @throws NullPointerException if a required argument is null
+   */
   default CompletableFuture<SystemOneResponse> systemOneAsync(State state, Questions questions) {
     return systemOneAsync(SystemOneRequest.of(state, questions));
   }
 
-  /** Answers the questions asynchronously. */
+  /**
+   * Answers the questions asynchronously.
+   *
+   * <p>HTTP, transport, response-validation and deadline failures complete the returned future
+   * exceptionally with {@link JevException}. Cancellation is terminal. See the class documentation
+   * for callback threading.
+   *
+   * @throws IllegalStateException immediately if the client is closing or closed
+   * @throws NullPointerException if a required argument is null
+   */
   default CompletableFuture<SystemOneResponse> systemOneAsync(SystemOneRequest request) {
     return systemOneAsync(request, RequestOptions.NONE);
   }
 
-  /** Answers the questions asynchronously with per-call HTTP options. */
+  /**
+   * Answers the questions asynchronously with per-call HTTP options.
+   *
+   * <p>HTTP, transport, response-validation and deadline failures complete the returned future
+   * exceptionally with {@link JevException}. Cancellation is terminal. See the class documentation
+   * for callback threading.
+   *
+   * @throws IllegalStateException immediately if the client is closing or closed
+   * @throws NullPointerException if a required argument is null
+   */
   CompletableFuture<SystemOneResponse> systemOneAsync(
       SystemOneRequest request, RequestOptions options);
 
-  /** Lists the models and aliases this account may send. */
+  /**
+   * Lists the models and aliases this account may send.
+   *
+   * @throws IllegalStateException if the client is closing or closed
+   * @throws JevInterruptedException if the calling thread is interrupted; its interrupt flag is
+   *     restored
+   * @throws JevException if the operation fails, including HTTP, transport, response-validation or
+   *     deadline failures
+   * @throws java.util.concurrent.CancellationException if shutdown cancels the in-flight call
+   */
   default ModelList models() {
     return models(RequestOptions.NONE);
   }
 
-  /** Lists the models and aliases with per-call HTTP options. */
+  /**
+   * Lists the models and aliases with per-call HTTP options.
+   *
+   * @throws IllegalStateException if the client is closing or closed
+   * @throws JevInterruptedException if the calling thread is interrupted; its interrupt flag is
+   *     restored
+   * @throws JevException if the operation fails, including HTTP, transport, response-validation or
+   *     deadline failures
+   * @throws java.util.concurrent.CancellationException if shutdown cancels the in-flight call
+   * @throws NullPointerException if options is null
+   */
   ModelList models(RequestOptions options);
 
-  /** Lists the models and aliases asynchronously. */
+  /**
+   * Lists the models and aliases asynchronously.
+   *
+   * <p>HTTP, transport, response-validation and deadline failures complete the returned future
+   * exceptionally with {@link JevException}. Cancellation is terminal. See the class documentation
+   * for callback threading.
+   *
+   * @throws IllegalStateException immediately if the client is closing or closed
+   */
   default CompletableFuture<ModelList> modelsAsync() {
     return modelsAsync(RequestOptions.NONE);
   }
 
-  /** Lists the models and aliases asynchronously with per-call HTTP options. */
+  /**
+   * Lists the models and aliases asynchronously with per-call HTTP options.
+   *
+   * <p>HTTP, transport, response-validation and deadline failures complete the returned future
+   * exceptionally with {@link JevException}. Cancellation is terminal. See the class documentation
+   * for callback threading.
+   *
+   * @throws IllegalStateException immediately if the client is closing or closed
+   * @throws NullPointerException if options is null
+   */
   CompletableFuture<ModelList> modelsAsync(RequestOptions options);
 
-  /** Shuts the client down; see the class documentation. Never throws a checked exception. */
+  /**
+   * Shuts the client down; see the class documentation. Never throws a checked exception.
+   *
+   * @throws JevException if result publication or concurrent shutdown exceeds its bound, or
+   *     shutdown is interrupted; interruption restores the calling thread's interrupt flag
+   */
   @Override
   void close();
 
@@ -121,7 +224,12 @@ public interface JevClient extends AutoCloseable {
     return new JevClientBuilder();
   }
 
-  /** An HTTP client configured entirely from the environment ({@code TYPESAFE_*} variables). */
+  /**
+   * An HTTP client configured entirely from the environment ({@code TYPESAFE_*} variables).
+   *
+   * @throws JevException if the API key or another resolved SDK setting is invalid or missing
+   * @throws IllegalArgumentException if the configured base URL is not a valid URI
+   */
   static JevClient fromEnv() {
     return builder().build();
   }

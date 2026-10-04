@@ -51,7 +51,7 @@ class ReadmeUsageTest {
   }
 
   // --- "Ask" and "Read the answers"
-  // ---------------------------------------------------------------
+  //
   @Test
   void askAndReadTheAnswers() {
     String ticketText = TICKET;
@@ -107,7 +107,7 @@ class ReadmeUsageTest {
   }
 
   // --- "Per-call options and models"
-  // ---------------------------------------------------------------
+  //
   @Test
   void perCallOptionsAndModels() {
     Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));
@@ -131,7 +131,7 @@ class ReadmeUsageTest {
   }
 
   // --- "Async"
-  // ------------------------------------------------------------------------------------
+  //
   @Test
   void async() throws Exception {
     Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));
@@ -155,7 +155,7 @@ class ReadmeUsageTest {
   }
 
   // --- "Errors and retries"
-  // -------------------------------------------------------------------------
+  //
   @Test
   void errorsAndRetries() {
     Questions questions = Questions.of("q", net.codefinch.jev.model.NoulQuestion.of("?"));

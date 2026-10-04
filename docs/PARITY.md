@@ -113,6 +113,7 @@ is not. Metrics observers run asynchronously; they may be delivered after a call
 | Empty or incomplete `usage` | Rejected to follow the schema; Python's public `Usage` model accepts absent token counts. |
 | Mutable inputs | Copied into immutable content, rather than retaining caller-owned containers. |
 | Server-directed retry delay | 60 s cap, matching JavaScript; the pinned Python policy has no cap. |
+| HTTP/2 | The JDK transport prefers HTTP/2 and can fall back to HTTP/1.1; no optional packaging extra is needed. The server/proxy and any injected transport determine what is used. |
 | Operation lifecycle | Adds a whole-operation deadline, Java interruption/cancellation behavior and explicit resource ownership. |
 
 ## Pinned references
@@ -142,5 +143,5 @@ timestamp with an offset rather than a date alone. Invalid and missing keys prod
 Omitted and null instructions produced similar answers in a small probe; that does not establish
 semantic equivalence. Explicit null noul criteria were accepted, but this SDK emits omission.
 
-To recheck the supported live probes, follow [the opt-in test instructions](../README.md#building).
+To recheck the supported live probes, follow [the opt-in test instructions](../CONTRIBUTING.md#live-service-tests).
 They require `JEV_RUN_LIVE_TESTS=1` and `TYPESAFE_API_KEY`, make real calls and consume account usage.

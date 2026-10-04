@@ -12,6 +12,7 @@ import java.util.TreeMap;
  * @param legend the requested level descriptions keyed by level number, so the score can be read
  * @param probabilities probability per level number
  * @param confidence how concentrated the probability mass is, in {@code [0, 1]}
+ * @since 0.1.0
  */
 public record ScoreAnswer(
     double score,
@@ -33,7 +34,7 @@ public record ScoreAnswer(
     return "score";
   }
 
-  /** The highest level number, i.e. {@code legend.size() - 1}. */
+  /** The largest legend key, or zero when the legend is empty; keys need not be contiguous. */
   public int topLevel() {
     return legend.isEmpty() ? 0 : Collections.max(legend.keySet());
   }

@@ -17,10 +17,16 @@ import net.codefinch.jev.model.SystemOneResponse;
  * slow or blocked observer therefore delays only its own event queue; an observer that throws is
  * logged and ignored. Observation never affects the call, its result, its deadline or {@code
  * close()}.
+ *
+ * @since 0.1.0
  */
 public interface CallObserver {
 
-  /** How a call ended. */
+  /**
+   * How a call ended.
+   *
+   * @since 0.1.0
+   */
   enum Outcome {
     /** A 2xx response that parsed. */
     SUCCESS,
@@ -40,6 +46,7 @@ public interface CallObserver {
    * @param elapsed from sending the request to the end of body delivery, or to the failure
    * @param status the HTTP status, or empty when no response was received
    * @param failure the failure this attempt produced, if any (a 5xx still has a status)
+   * @since 0.1.0
    */
   record Attempt(
       String operation,
@@ -60,6 +67,7 @@ public interface CallObserver {
    * @param response the response, for a successful {@code systemone}
    * @param failure the failure, for {@link Outcome#ERROR}, {@link Outcome#DEADLINE} and
    *     interruption
+   * @since 0.1.0
    */
   record Call(
       String operation,

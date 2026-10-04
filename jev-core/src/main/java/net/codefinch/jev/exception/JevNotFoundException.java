@@ -3,7 +3,11 @@ package net.codefinch.jev.exception;
 import java.util.List;
 import java.util.Map;
 
-/** HTTP 404: not found. Mirrors upstream {@code TypeSafeNotFoundError}. */
+/**
+ * HTTP 404: not found. Mirrors upstream {@code TypeSafeNotFoundError}.
+ *
+ * @since 0.1.0
+ */
 public class JevNotFoundException extends JevApiException {
   private static final long serialVersionUID = 1L;
 

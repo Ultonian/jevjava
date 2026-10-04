@@ -29,6 +29,8 @@ import net.codefinch.jev.model.Usage;
  * <p>Numeric values are not range-validated: scripts can deliberately exercise malformed responses.
  * For realistic answers, use finite probabilities/confidence in {@code [0, 1]} and scores within
  * the rubric. Raw answer overloads and {@link #put(String, Answer)} also allow arbitrary fixtures.
+ *
+ * @since 0.1.0
  */
 public final class ScriptedAnswers {
   private final Map<String, Question> questions;

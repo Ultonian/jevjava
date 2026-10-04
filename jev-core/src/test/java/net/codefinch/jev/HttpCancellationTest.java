@@ -166,7 +166,7 @@ class HttpCancellationTest {
     }
   }
 
-  /** R4 P2(1): explicitly cancelled calls must not stay tracked, whatever state they were in. */
+  /** Explicitly cancelled calls must not stay tracked, whatever state they were in. */
   @Test
   void explicitCancellationReleasesTrackingInEveryState() throws Exception {
     // (a) 100 cancellations before start on a blocked caller-owned executor (the reviewer's probe).

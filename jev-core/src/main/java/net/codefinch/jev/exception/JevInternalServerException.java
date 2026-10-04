@@ -7,6 +7,8 @@ import java.util.Map;
  * Any HTTP 5xx, including 529 (overloaded). Upstream has no dedicated overloaded class, so neither
  * does this SDK; use {@link #isOverloaded()} or {@link #status()}. Mirrors upstream {@code
  * TypeSafeInternalServerError}.
+ *
+ * @since 0.1.0
  */
 public class JevInternalServerException extends JevApiException {
   private static final long serialVersionUID = 1L;

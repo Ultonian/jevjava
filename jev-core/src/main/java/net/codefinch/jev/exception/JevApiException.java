@@ -13,7 +13,9 @@ import net.codefinch.jev.model.ResponseMetadata;
  * Mirrors upstream {@code TypeSafeAPIError}.
  *
  * <p>The status, the response headers and the raw body are always kept verbatim, whatever their
- * shape; the message is extracted from the body on a best-effort basis (see {@link ErrorMessages}).
+ * shape; the message is extracted from the body on a best-effort basis (see {@code ErrorMessages}).
+ *
+ * @since 0.1.0
  */
 public class JevApiException extends JevException {
   private static final long serialVersionUID = 1L;

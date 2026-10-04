@@ -9,6 +9,7 @@ import java.util.Optional;
  *
  * @param models the models and aliases, in response order
  * @param metadata request id, headers and raw body
+ * @since 0.1.0
  */
 public record ModelList(List<ModelMetadata> models, ResponseMetadata metadata) {
 

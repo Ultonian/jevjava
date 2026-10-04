@@ -1,7 +1,31 @@
 # Release strategy
 
-Draft for review. The branch, packaging and publication automation described here still needs
-implementing. The first proposed release is `0.1.0`.
+The first proposed release is `0.1.0`. The checks below are the release contract; candidate bundle
+and promotion automation are not implemented yet. Do not treat a normal `verify` build as a
+publishable release or tag before those prerequisites are complete.
+
+## Before cutting a release branch
+
+- Finish the agreed API, documentation and quality-gate work on `main`; record a green CI commit.
+- Verify repository protections, security monitoring and the private reporting channel using the
+  owner account. Local scanner results do not establish GitHub settings.
+- Complete the [publishing setup](#publishing-setup-to-implement-before-the-cut), including an
+  unpublished signed bundle rehearsal, exact module checks and isolated consumers.
+- Confirm Central namespace access and release-environment credentials without placing secrets
+  in source, build logs or evidence archives.
+- Record who approves the candidate and where the immutable artifacts and qualification results
+  will be retained. Keep failed candidate evidence too.
+
+Current local checks, from the repository root:
+
+```sh
+./mvnw verify
+pre-commit run --all-files
+```
+
+See [CONTRIBUTING](../../CONTRIBUTING.md) for tool setup and live-test opt-in. These commands do
+not sign or publish artifacts. Release workflow commands must be documented and rehearsed when
+that automation is implemented.
 
 ## Branches and versions
 
@@ -29,7 +53,7 @@ stable tags against replacement or deletion.
 1. **Cut:** create `release/0.1` from a green, recorded commit. Bump `main` to the next snapshot
    in a separate commit so normal development can continue.
 2. **Prepare:** on the release branch, set the final Maven version (`0.1.0`), finalize the
-   changelog, dependency examples and SCM metadata, and set a fixed reproducible-build timestamp.
+   changelog (date the release and add its tag/compare links), the README dependency version and SCM metadata, and set a fixed reproducible-build timestamp.
    Build from a clean committed checkout on a pinned JDK 21 distribution and patch version.
 3. **Archive:** build and sign one publication bundle. Identify it as candidate 1 using its full
    commit SHA, workflow run ID and SHA-256 hashes. Retain the exact SDK artifacts, benchmark JAR,
@@ -69,6 +93,8 @@ the normal release process. See [Central immutability](https://central.sonatype.
 - Inspect the published POMs and dependency graph: no snapshot dependencies, resolvable parent/BOMs,
   correct Java baseline, license, project/developer/SCM metadata, and no benchmark dependencies in
   the libraries. Verify signatures and that sources and Javadoc match the binary artifacts.
+  Generate Javadoc from clean output and assert the JARs and their indexes contain no internal
+  package pages; incremental generation can retain obsolete HTML despite package exclusions.
 - Review the public API, README examples, release notes and known limitations. From the second
   release onward, compare API compatibility with the previous release; introduce an automated
   compatibility check before it becomes a recurring manual task.

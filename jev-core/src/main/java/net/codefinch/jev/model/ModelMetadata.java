@@ -9,6 +9,7 @@ import java.util.Objects;
  * @param description human-readable description
  * @param releaseDate release date as sent by the server; the docs say {@code YYYY-MM-DD} but the
  *     live API returns an ISO-8601 timestamp with offset, so this is kept verbatim
+ * @since 0.1.0
  */
 public record ModelMetadata(String name, String description, String releaseDate) {
 

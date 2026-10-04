@@ -224,9 +224,7 @@ class HttpRequestTest {
     }
   }
 
-  /**
-   * Review P2: the "never follows redirects" guarantee holds for both transport ownership modes.
-   */
+  /** The "never follows redirects" guarantee holds for both transport ownership modes. */
   @Test
   void redirectsAreNeverFollowedAndInjectedTransportsMustAgree() throws Exception {
     assertThatThrownBy(

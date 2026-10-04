@@ -9,6 +9,7 @@ import java.util.Objects;
  * Unlike other content positions, the API does not accept {@code null} state.
  *
  * @param content the state content; never {@link Content#NULL}
+ * @since 0.1.0
  */
 public record State(Content content) {
 
