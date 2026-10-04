@@ -1,14 +1,12 @@
 """Fast pilot contract/audit tests. No measurement JVMs or external services."""
 import copy
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-from test_study import load
-
-pilot = load("executor_pilot", "executor-pilot.py")
+import executor_pilot as pilot
 
 
 class ExecutorPilotTest(unittest.TestCase):

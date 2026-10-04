@@ -1,5 +1,6 @@
 package net.codefinch.jev.exception;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -36,8 +37,7 @@ public class JevUnprocessableEntityException extends JevApiException {
    * @param message the {@code msg}
    * @param type the {@code type}, or empty string if absent
    */
-  public record FieldError(String path, String message, String type)
-      implements java.io.Serializable {
+  public record FieldError(String path, String message, String type) implements Serializable {
     private static final long serialVersionUID = 1L;
   }
 }

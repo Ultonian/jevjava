@@ -1,14 +1,12 @@
 """Synthetic study validation only; ordinary tests never launch JFR workloads."""
 import copy
-from pathlib import Path
 import tempfile
 import unittest
 import zipfile
+from pathlib import Path
 
+import diagnostic_study as study
 import test_executor_pilot as fixtures
-from test_study import load
-
-study = load("diagnostic_study", "diagnostic-study.py")
 
 
 class DiagnosticStudyTest(unittest.TestCase):

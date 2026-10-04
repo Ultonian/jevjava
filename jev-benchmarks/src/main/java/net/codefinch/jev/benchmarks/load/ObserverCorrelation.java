@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 /** Bounded successful-systemOne correlation, reserving IDs before either event can arrive. */
 public final class ObserverCorrelation {
@@ -96,7 +97,7 @@ public final class ObserverCorrelation {
       if (remaining <= 0) {
         return false;
       }
-      java.util.concurrent.TimeUnit.NANOSECONDS.timedWait(this, remaining);
+      TimeUnit.NANOSECONDS.timedWait(this, remaining);
     }
     return true;
   }

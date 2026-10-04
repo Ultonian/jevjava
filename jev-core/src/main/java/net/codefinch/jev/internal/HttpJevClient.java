@@ -41,6 +41,10 @@ public final class HttpJevClient implements JevClient {
   /** Header carrying the zero-based retry number on retries; stripped from caller headers. */
   public static final String RETRY_COUNT_HEADER = "X-TypeSafe-Retry-Count";
 
+  // Poll future state rather than wait for callbacks, which may block in application code.
+  private static final long GRACE_POLL_MILLIS = 5;
+  private static final long PUBLICATION_POLL_MILLIS = 1;
+
   private final ClientConfig config;
   private final Diagnostics diagnostics;
   private final HttpExchange exchange;
@@ -183,7 +187,7 @@ public final class HttpJevClient implements JevClient {
     boolean interrupted = false;
     while (anyUnfinished() && config.nanoTime().getAsLong() < deadline) {
       try {
-        Thread.sleep(5);
+        Thread.sleep(GRACE_POLL_MILLIS);
       } catch (InterruptedException e) {
         interrupted = true;
         break;
@@ -298,7 +302,7 @@ public final class HttpJevClient implements JevClient {
         return Publication.TIMED_OUT;
       }
       try {
-        Thread.sleep(1);
+        Thread.sleep(PUBLICATION_POLL_MILLIS);
       } catch (InterruptedException e) {
         return Publication.INTERRUPTED;
       }

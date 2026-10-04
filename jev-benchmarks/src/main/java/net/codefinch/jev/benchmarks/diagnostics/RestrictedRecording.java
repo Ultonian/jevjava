@@ -1,18 +1,22 @@
 package net.codefinch.jev.benchmarks.diagnostics;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.text.ParseException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.TreeMap;
 import jdk.jfr.Configuration;
 import jdk.jfr.FlightRecorder;
 import jdk.jfr.Recording;
@@ -23,16 +27,17 @@ import net.codefinch.jev.benchmarks.fixtures.Payloads;
 
 /** Explicitly allowlisted recording and streaming analysis; separate from throughput baselines. */
 public final class RestrictedRecording implements AutoCloseable {
+  private static final long RETENTION_LIMIT_BYTES = 64L * 1024 * 1024;
+  private static final long RETENTION_WARNING_BYTES = 56L * 1024 * 1024;
+  private static final int PIN_STACK_LIMIT = 32;
   private final Recording recording;
   private final Map<String, String> settings;
   private final String configHash;
 
-  /** Every available event starts disabled; only the checked-in allowlist can enable it. */
-  public RestrictedRecording() throws IOException, ParseException {
-    this(false);
-  }
-
-  /** The long-window profile samples execution at 10 ms and enables data-loss detection. */
+  /**
+   * Disables every event before applying the checked-in allowlist. The long-window profile samples
+   * execution at 10 ms and enables data-loss detection.
+   */
   public RestrictedRecording(boolean longWindow) throws IOException, ParseException {
     final byte[] bytes;
     String resource = longWindow ? "restricted-long.jfc" : "restricted.jfc";
@@ -45,9 +50,9 @@ public final class RestrictedRecording implements AutoCloseable {
     configHash = Payloads.hash(bytes);
     Configuration config =
         Configuration.create(
-            new InputStreamReader(new java.io.ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
+            new InputStreamReader(new ByteArrayInputStream(bytes), StandardCharsets.UTF_8));
     settings = new HashMap<>();
-    var available = new java.util.HashSet<String>();
+    var available = new HashSet<String>();
     for (var event : FlightRecorder.getFlightRecorder().getEventTypes()) {
       available.add(event.getName());
       settings.put(event.getName() + "#enabled", "false");
@@ -62,7 +67,7 @@ public final class RestrictedRecording implements AutoCloseable {
     }
     settings.putAll(config.getSettings());
     recording = new Recording(settings);
-    recording.setMaxSize(64L * 1024 * 1024);
+    recording.setMaxSize(RETENTION_LIMIT_BYTES);
     recording.start();
   }
 
@@ -99,116 +104,123 @@ public final class RestrictedRecording implements AutoCloseable {
     }
     result.put("configurationSha256", configHash);
     result.put("settings", settings);
-    result.put("recordingBytes", java.nio.file.Files.size(file));
-    result.put("recordingSha256", Payloads.hash(java.nio.file.Files.readAllBytes(file)));
-    result.put("retentionLimitBytes", 64L * 1024 * 1024);
-    result.put("nearRetentionLimit", recording.getSize() >= 56L * 1024 * 1024);
+    result.put("recordingBytes", Files.size(file));
+    result.put("recordingSha256", Payloads.hash(Files.readAllBytes(file)));
+    result.put("retentionLimitBytes", RETENTION_LIMIT_BYTES);
+    result.put("nearRetentionLimit", recording.getSize() >= RETENTION_WARNING_BYTES);
     result.put("recordingScope", "entire trial; privacy and allowlist checks cover every event");
     return result;
-  }
-
-  /** Streams all event fields for sentinel checks; keeps only bounded diagnostic summaries. */
-  public static Map<String, Object> inspect(Path file, List<String> sentinels) throws IOException {
-    return inspect(file, sentinels, null);
   }
 
   /** Scans all fields for sentinels before applying the optional event-start filter. */
   public static Map<String, Object> inspect(Path file, List<String> sentinels, Window window)
       throws IOException {
-    Map<String, Long> recordingCounts = new java.util.TreeMap<>();
-    Map<String, Long> counts = new java.util.TreeMap<>();
-    Map<String, Long> weights = new java.util.TreeMap<>();
-    Map<String, Long> allocationSamples = new java.util.TreeMap<>();
-    List<Object> pinStacks = new ArrayList<>();
-    Map<String, Long> pinReasons = new java.util.TreeMap<>();
-    Map<String, Long> pinOperations = new java.util.TreeMap<>();
-    SampleSummary samples = new SampleSummary(1024);
-    long lostBytes = 0;
-    long pinnedNanos = 0;
-    Random reservoir = new Random(0);
+    Analysis analysis = new Analysis();
     try (RecordingFile input = new RecordingFile(file)) {
       while (input.hasMoreEvents()) {
-        RecordedEvent event = input.readEvent();
-        String name = event.getEventType().getName();
-        if (!sentinels.isEmpty()) {
-          scan(event, sentinels, new IdentityHashMap<>());
-        }
-        recordingCounts.merge(name, 1L, Long::sum);
-        if (name.equals("jdk.DataLoss")) {
-          lostBytes += event.getLong("amount");
-        }
-        if (window != null && !window.contains(event.getStartTime())) {
-          continue;
-        }
-        counts.merge(name, 1L, Long::sum);
-        if (name.equals("jdk.ExecutionSample") || name.equals("jdk.NativeMethodSample")) {
-          var thread = event.getThread("sampledThread");
-          samples.add(
-              name,
-              frames(event),
-              thread == null ? "" : String.valueOf(thread.getJavaName()),
-              thread == null ? "unknown" : thread.isVirtual() ? "virtual" : "platform",
-              event.getStackTrace() != null && event.getStackTrace().isTruncated());
-        }
-        if (name.equals("jdk.ObjectAllocationSample")) {
-          String role = allocationRole(event);
-          weights.merge(role, event.getLong("weight"), Long::sum);
-          allocationSamples.merge(role, 1L, Long::sum);
-        }
-        if (name.equals("jdk.VirtualThreadPinned")) {
-          pinnedNanos += event.getDuration().toNanos();
-          pinReasons.merge(pinField(event, "pinnedReason"), 1L, Long::sum);
-          pinOperations.merge(pinField(event, "blockingOperation"), 1L, Long::sum);
-          retainPin(
-              pinStacks,
-              Map.of(
-                  "durationNanos",
-                  event.getDuration().toNanos(),
-                  "start",
-                  event.getStartTime().toString(),
-                  "frames",
-                  frames(event)),
-              counts.get(name),
-              reservoir);
-        }
+        analysis.accept(input.readEvent(), sentinels, window);
       }
     }
-    Map<String, Object> result = new LinkedHashMap<>();
-    result.put("recordingEventCounts", recordingCounts);
-    result.put("eventCounts", counts);
-    result.put("recordingDataLossBytes", lostBytes);
-    result.put("executionSamples", samples.snapshot());
-    result.put(
-        "scope",
-        window == null
-            ? "entire recording; combined process"
-            : "measured window; combined process; event start in [start,end), full event duration");
-    if (window != null) {
-      result.put("windowStart", window.start().toString());
-      result.put("windowEnd", window.end().toString());
+    return analysis.snapshot(window);
+  }
+
+  private static final class Analysis {
+    private final Map<String, Long> recordingCounts = new TreeMap<>();
+    private final Map<String, Long> counts = new TreeMap<>();
+    private final Map<String, Long> weights = new TreeMap<>();
+    private final Map<String, Long> allocationSamples = new TreeMap<>();
+    private final List<Object> pinStacks = new ArrayList<>();
+    private final Map<String, Long> pinReasons = new TreeMap<>();
+    private final Map<String, Long> pinOperations = new TreeMap<>();
+    private final SampleSummary samples = new SampleSummary(1024);
+    private long lostBytes = 0;
+    private long pinnedNanos = 0;
+    private final Random reservoir = new Random(0);
+
+    void accept(RecordedEvent event, List<String> sentinels, Window window) {
+      String name = event.getEventType().getName();
+      if (!sentinels.isEmpty()) {
+        scan(event, sentinels, new IdentityHashMap<>());
+      }
+      recordingCounts.merge(name, 1L, Long::sum);
+      if (name.equals("jdk.DataLoss")) {
+        lostBytes += event.getLong("amount");
+      }
+      if (window != null && !window.contains(event.getStartTime())) {
+        return;
+      }
+      counts.merge(name, 1L, Long::sum);
+      if (name.equals("jdk.ExecutionSample") || name.equals("jdk.NativeMethodSample")) {
+        var thread = event.getThread("sampledThread");
+        samples.add(
+            name,
+            frames(event),
+            thread == null ? "" : String.valueOf(thread.getJavaName()),
+            thread == null ? "unknown" : thread.isVirtual() ? "virtual" : "platform",
+            event.getStackTrace() != null && event.getStackTrace().isTruncated());
+      }
+      if (name.equals("jdk.ObjectAllocationSample")) {
+        String role = allocationRole(event);
+        weights.merge(role, event.getLong("weight"), Long::sum);
+        allocationSamples.merge(role, 1L, Long::sum);
+      }
+      if (name.equals("jdk.VirtualThreadPinned")) {
+        pinnedNanos += event.getDuration().toNanos();
+        pinReasons.merge(pinField(event, "pinnedReason"), 1L, Long::sum);
+        pinOperations.merge(pinField(event, "blockingOperation"), 1L, Long::sum);
+        retainPin(
+            pinStacks,
+            Map.of(
+                "durationNanos",
+                event.getDuration().toNanos(),
+                "start",
+                event.getStartTime().toString(),
+                "frames",
+                frames(event)),
+            counts.get(name),
+            reservoir);
+      }
     }
-    result.put("allocationSampleCountsByRole", allocationSamples);
-    result.put("allocationSampleWeightsByRole", weights);
-    result.put(
-        "attribution",
-        "innermost matching frame among first 64; SDK frames precede outer callers naturally;"
-            + " server thread name is a fallback only");
-    result.put(
-        "allocationInterpretation",
-        "sample weights estimate pressure; sample count is not bytes and weights are not an"
-            + " allocation census");
-    result.put("pinningThreshold", "1 ms");
-    result.put("pinnedNanos", pinnedNanos);
-    result.put("pinReasons", pinReasons);
-    result.put("pinBlockingOperations", pinOperations);
-    result.put("pinnedStacks", pinStacks);
-    result.put(
-        "pinStackSampling",
-        "uniform reservoir, capacity 32, java.util.Random seed 0, recording traversal order");
-    result.put(
-        "pinningInterpretation",
-        "zero events means none observed under these settings, not proof of no pinning");
-    return result;
+
+    Map<String, Object> snapshot(Window window) {
+      Map<String, Object> result = new LinkedHashMap<>();
+      result.put("recordingEventCounts", recordingCounts);
+      result.put("eventCounts", counts);
+      result.put("recordingDataLossBytes", lostBytes);
+      result.put("executionSamples", samples.snapshot());
+      result.put(
+          "scope",
+          window == null
+              ? "entire recording; combined process"
+              : "measured window; combined process; event start in [start,end), full event"
+                  + " duration");
+      if (window != null) {
+        result.put("windowStart", window.start().toString());
+        result.put("windowEnd", window.end().toString());
+      }
+      result.put("allocationSampleCountsByRole", allocationSamples);
+      result.put("allocationSampleWeightsByRole", weights);
+      result.put(
+          "attribution",
+          "innermost matching frame among first 64; SDK frames precede outer callers naturally;"
+              + " server thread name is a fallback only");
+      result.put(
+          "allocationInterpretation",
+          "sample weights estimate pressure; sample count is not bytes and weights are not an"
+              + " allocation census");
+      result.put("pinningThreshold", "1 ms");
+      result.put("pinnedNanos", pinnedNanos);
+      result.put("pinReasons", pinReasons);
+      result.put("pinBlockingOperations", pinOperations);
+      result.put("pinnedStacks", pinStacks);
+      result.put(
+          "pinStackSampling",
+          "uniform reservoir, capacity 32, java.util.Random seed 0, recording traversal order");
+      result.put(
+          "pinningInterpretation",
+          "zero events means none observed under these settings, not proof of no pinning");
+      return result;
+    }
   }
 
   private static String pinField(RecordedEvent event, String field) {
@@ -218,9 +230,9 @@ public final class RestrictedRecording implements AutoCloseable {
   }
 
   static void retainPin(List<Object> samples, Object sample, long seen, Random random) {
-    long index = seen <= 32 ? seen - 1 : random.nextLong(seen);
-    if (index < 32) {
-      if (samples.size() < 32) {
+    long index = seen <= PIN_STACK_LIMIT ? seen - 1 : random.nextLong(seen);
+    if (index < PIN_STACK_LIMIT) {
+      if (samples.size() < PIN_STACK_LIMIT) {
         samples.add(sample);
       } else {
         samples.set((int) index, sample);

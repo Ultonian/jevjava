@@ -34,8 +34,8 @@ final class ImmediateSession implements AutoCloseable {
             .httpClient(transport)
             .defaultModel("jev-latest")
             .retryPolicy(RetryPolicy.NONE)
-            .timeout(Duration.ofSeconds(15))
-            .deadline(Duration.ofSeconds(20))
+            .timeout(LoadSettings.ATTEMPT_TIMEOUT)
+            .deadline(LoadSettings.DEADLINE)
             .closeGracePeriod(Duration.ofSeconds(1))
             .publicationTimeout(Duration.ofSeconds(2))
             .logLevel(System.Logger.Level.WARNING)
@@ -48,7 +48,7 @@ final class ImmediateSession implements AutoCloseable {
     ProcessResources before = ProcessResources.capture();
     Map<String, Object> result =
         new LinkedHashMap<>(
-            LoadDriver.run(cell.concurrency(), duration, Duration.ofSeconds(5), this::invoke));
+            LoadDriver.run(cell.concurrency(), duration, LoadSettings.DRAIN, this::invoke));
     Map<String, Object> resources = new LinkedHashMap<>(ProcessResources.capture().since(before));
     resources.put("scope", "SDK + synthetic transport + driver; measurement and result drain");
     result.put("resources", resources);

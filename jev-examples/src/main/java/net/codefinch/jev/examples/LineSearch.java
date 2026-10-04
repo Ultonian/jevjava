@@ -45,6 +45,10 @@ public final class LineSearch {
     return "L" + (i + 1);
   }
 
+  static int lineIndex(String id) {
+    return Integer.parseInt(id.substring(1)) - 1;
+  }
+
   /** The document as state: one object per line, so the ids are visible to the model. */
   static State state() {
     List<Map<String, Object>> lines = new ArrayList<>();
@@ -82,7 +86,7 @@ public final class LineSearch {
       return Optional.empty();
     }
     ChoiceAnswer where = a.choice("where");
-    int index = Integer.parseInt(where.choice().substring(1)) - 1;
+    int index = lineIndex(where.choice());
     return Optional.of(
         new Hit(where.choice(), DOCUMENT.get(index), where.probabilities().get(where.choice())));
   }

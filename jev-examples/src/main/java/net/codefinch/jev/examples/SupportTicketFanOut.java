@@ -60,6 +60,8 @@ public final class SupportTicketFanOut {
   /** Frustration at or above "frustrated but civil" flags the ticket regardless of category. */
   static final double FRUSTRATION_FLAG = 1.0;
 
+  private static final double URGENT_BUG_SEVERITY = 1.5;
+
   private SupportTicketFanOut() {}
 
   record Routing(String category, String handler, boolean frustrated) {}
@@ -86,7 +88,7 @@ public final class SupportTicketFanOut {
             REPRODUCIBLE.decide(a.noul("has_reproducible_steps")) == NoulThreshold.Decision.YES
                 ? "with repro steps"
                 : "needs repro steps";
-        yield severity >= 1.5
+        yield severity >= URGENT_BUG_SEVERITY
             ? "engineering on-call (blocking, " + repro + ")"
             : "bug backlog (" + repro + ")";
       }

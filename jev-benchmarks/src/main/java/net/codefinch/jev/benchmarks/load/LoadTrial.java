@@ -1,8 +1,10 @@
 package net.codefinch.jev.benchmarks.load;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -16,8 +18,7 @@ public final class LoadTrial {
   private LoadTrial() {}
 
   /** Internal entry point: config JSON and a new trial directory, never an endpoint override. */
-  public static void main(String[] args)
-      throws java.io.IOException, InterruptedException, java.text.ParseException {
+  public static void main(String[] args) throws IOException, InterruptedException, ParseException {
     if (args.length != 2) {
       throw new IllegalArgumentException("Expected config file and trial directory");
     }
@@ -35,20 +36,36 @@ public final class LoadTrial {
             LoadCase.Variant.valueOf(config.path("variant").asText()),
             config.path("control").asBoolean());
     String mode = config.path("mode").asText();
-    if (!List.of(
-            "smoke",
-            "baseline",
-            "diagnostic",
-            "diagnostic-control",
-            "pilot",
-            "diagnostic-long",
-            "diagnostic-long-control")
-        .contains(mode)) {
+    if (!LoadSettings.MODES.contains(mode)) {
       throw new IllegalArgumentException("Invalid mode");
     }
     final boolean diagnostic = mode.equals("diagnostic") || mode.equals("diagnostic-long");
     final Duration warmup = warmup(mode);
     final Duration measurement = measurement(mode);
+    Map<String, Object> result = metadata(cell, mode);
+    try (RestrictedRecording recording =
+        diagnostic ? new RestrictedRecording(mode.equals("diagnostic-long")) : null) {
+      runCohorts(result, cell, warmup, measurement);
+      result.put(
+          "cleanup",
+          cell.variant() == LoadCase.Variant.IMMEDIATE
+              ? "client and synthetic transport closed normally; no server"
+              : "client, caller-owned resources and server closed normally");
+      if (recording != null) {
+        finishRecording(recording, output, result);
+      }
+      result.put("status", "complete");
+    } catch (IOException | InterruptedException | ParseException | RuntimeException e) {
+      result.put("status", "failed");
+      result.put("failureClass", e.getClass().getName());
+      throw e;
+    } finally {
+      Files.writeString(
+          output.resolve("results.json"), Json.toTree(result).toPrettyString() + "\n");
+    }
+  }
+
+  private static Map<String, Object> metadata(LoadCase cell, String mode) {
     Map<String, Object> result = new LinkedHashMap<>();
     result.put("cell", cell);
     result.put("mode", mode);
@@ -57,13 +74,13 @@ public final class LoadTrial {
         "timeouts",
         Map.of(
             "attemptSeconds",
-            15,
+            LoadSettings.ATTEMPT_TIMEOUT.toSeconds(),
             "deadlineSeconds",
-            20,
+            LoadSettings.DEADLINE.toSeconds(),
             "resultDrainSeconds",
-            5,
+            LoadSettings.DRAIN.toSeconds(),
             "observerDrainSeconds",
-            5));
+            LoadSettings.DRAIN.toSeconds()));
     result.put(
         "operationExecutor",
         cell.control()
@@ -83,55 +100,43 @@ public final class LoadTrial {
               "maxPoolSizeOverride",
                   System.getProperty("jdk.virtualThreadScheduler.maxPoolSize", "unset")));
     }
-    try (RestrictedRecording recording =
-        diagnostic ? new RestrictedRecording(mode.equals("diagnostic-long")) : null) {
-      if (cell.variant() == LoadCase.Variant.IMMEDIATE) {
-        try (ImmediateSession session = new ImmediateSession(cell)) {
-          result.put("warmup", session.cohort(warmup));
-          validate(Json.toTree(result.get("warmup")), cell);
-          result.put("measured", session.cohort(measurement));
-          validate(Json.toTree(result.get("measured")), cell);
-        }
-      } else {
-        try (LoadSession session = new LoadSession(cell)) {
-          result.put("warmup", session.cohort(warmup));
-          validate(Json.toTree(result.get("warmup")), cell);
-          result.put("measured", session.cohort(measurement));
-          validate(Json.toTree(result.get("measured")), cell);
-        }
+    return result;
+  }
+
+  private static void runCohorts(
+      Map<String, Object> result, LoadCase cell, Duration warmup, Duration measurement)
+      throws IOException, InterruptedException {
+    if (cell.variant() == LoadCase.Variant.IMMEDIATE) {
+      try (ImmediateSession session = new ImmediateSession(cell)) {
+        result.put("warmup", session.cohort(warmup));
+        validate(Json.toTree(result.get("warmup")), cell);
+        result.put("measured", session.cohort(measurement));
+        validate(Json.toTree(result.get("measured")), cell);
       }
-      result.put(
-          "cleanup",
-          cell.variant() == LoadCase.Variant.IMMEDIATE
-              ? "client and synthetic transport closed normally; no server"
-              : "client, caller-owned resources and server closed normally");
-      if (recording != null) {
-        var measured = Json.toTree(result.get("measured"));
-        var diagnosticResult =
-            recording.finish(
-                output.resolve("diagnostics.jfr"),
-                List.of(),
-                new RestrictedRecording.Window(
-                    Instant.parse(measured.path("windowStart").asText()),
-                    Instant.parse(measured.path("windowEnd").asText())));
-        result.put("diagnostics", diagnosticResult);
-        if (Boolean.TRUE.equals(diagnosticResult.get("nearRetentionLimit"))
-            || ((Number) diagnosticResult.get("recordingDataLossBytes")).longValue() != 0) {
-          throw new IllegalStateException(
-              "Diagnostic recording lost data or approached retention cap");
-        }
+    } else {
+      try (LoadSession session = new LoadSession(cell)) {
+        result.put("warmup", session.cohort(warmup));
+        validate(Json.toTree(result.get("warmup")), cell);
+        result.put("measured", session.cohort(measurement));
+        validate(Json.toTree(result.get("measured")), cell);
       }
-      result.put("status", "complete");
-    } catch (java.io.IOException
-        | InterruptedException
-        | java.text.ParseException
-        | RuntimeException e) {
-      result.put("status", "failed");
-      result.put("failureClass", e.getClass().getName());
-      throw e;
-    } finally {
-      Files.writeString(
-          output.resolve("results.json"), Json.toTree(result).toPrettyString() + "\n");
+    }
+  }
+
+  private static void finishRecording(
+      RestrictedRecording recording, Path output, Map<String, Object> result) throws IOException {
+    var measured = Json.toTree(result.get("measured"));
+    var diagnosticResult =
+        recording.finish(
+            output.resolve("diagnostics.jfr"),
+            List.of(),
+            new RestrictedRecording.Window(
+                Instant.parse(measured.path("windowStart").asText()),
+                Instant.parse(measured.path("windowEnd").asText())));
+    result.put("diagnostics", diagnosticResult);
+    if (Boolean.TRUE.equals(diagnosticResult.get("nearRetentionLimit"))
+        || ((Number) diagnosticResult.get("recordingDataLossBytes")).longValue() != 0) {
+      throw new IllegalStateException("Diagnostic recording lost data or approached retention cap");
     }
   }
 
@@ -174,20 +179,23 @@ public final class LoadTrial {
     }
     String expected =
         cell.status() == 200 ? "SUCCESS" : cell.status() < 500 ? "HTTP4XX" : "HTTP5XX";
-    if (admitted == 0
-        || admitted != result.path("completed").asLong()
-        || admitted != result.path("outcomes").path(expected).asLong()
-        || admitted != result.path("httpAttempts").asLong()
-        || result.path("forcedCleanup").asBoolean()
-        || result.path("unfinished").asLong() != 0
-        || (cell.variant() != LoadCase.Variant.IMMEDIATE
-            && !result.path("serverDrained").asBoolean())
-        || !result.path("observersDrained").asBoolean()
-        || result.path("peakInFlight").asInt() > cell.concurrency()
-        || result.path("serverAfter").path("rejectedTasks").asLong() != 0) {
-      throw new IllegalStateException(
-          "Incomplete or unexpected load accounting; inspect results.json");
-    }
+    require(admitted > 0, "No requests admitted");
+    require(admitted == completed, "Admitted/completed count mismatch");
+    require(
+        admitted == result.path("outcomes").path(expected).asLong(),
+        "Unexpected outcome mix; expected " + expected);
+    require(
+        admitted == result.path("httpAttempts").asLong(), "Admission/HTTP attempt count mismatch");
+    require(!result.path("forcedCleanup").asBoolean(), "Forced cleanup was required");
+    require(result.path("unfinished").asLong() == 0, "Unfinished calls remain");
+    require(
+        cell.variant() == LoadCase.Variant.IMMEDIATE || result.path("serverDrained").asBoolean(),
+        "Server did not drain");
+    require(result.path("observersDrained").asBoolean(), "Observers did not drain");
+    require(
+        result.path("peakInFlight").asInt() <= cell.concurrency(), "Concurrency limit exceeded");
+    require(
+        result.path("serverAfter").path("rejectedTasks").asLong() == 0, "Server rejected tasks");
     if (cell.variant() == LoadCase.Variant.IMMEDIATE
         && (!result.path("transportKind").asText().equals("immediate-in-memory")
             || result.has("serverAfter")
@@ -220,6 +228,12 @@ public final class LoadTrial {
                 + ", unmatched="
                 + observation.path("correlation").path("unmatched"));
       }
+    }
+  }
+
+  private static void require(boolean condition, String reason) {
+    if (!condition) {
+      throw new IllegalStateException(reason + "; inspect results.json");
     }
   }
 }

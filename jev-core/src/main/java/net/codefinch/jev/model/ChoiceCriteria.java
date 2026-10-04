@@ -2,6 +2,7 @@ package net.codefinch.jev.model;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import net.codefinch.jev.exception.JevBadRequestException;
@@ -66,7 +67,7 @@ public final class ChoiceCriteria {
       case Content c -> c;
       case String s -> Content.of(s);
       case Map<?, ?> m -> Content.fromJson(net.codefinch.jev.internal.Json.toTree(m));
-      case java.util.List<?> l -> Content.of(l);
+      case List<?> l -> Content.of(l);
       default ->
           throw new IllegalArgumentException(
               "description must be a String, Map, List, Content or null; got "

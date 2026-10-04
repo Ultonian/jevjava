@@ -14,7 +14,10 @@ import net.codefinch.jev.model.NoulAnswer;
 import net.codefinch.jev.model.ScoreAnswer;
 import net.codefinch.jev.model.Usage;
 
-/** Renders the real wire JSON for scripted responses, so raw bodies parse like HTTP ones. */
+/**
+ * Renders real wire JSON for scripted responses. Using the core's internal codec is deliberate:
+ * these modules are released together, and sharing it keeps fake and HTTP serialization aligned.
+ */
 final class WireJson {
   private static final JsonNodeFactory NODES = JsonNodeFactory.instance;
 

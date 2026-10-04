@@ -18,6 +18,7 @@ implementation classes remain in `.internal` with their existing visibility.
 | `CallExecution<T>` | One operation's retry/deadline policy, attempt/terminal ordering, cancellation handle, public result, observer queue, and publication |
 | `CallOptions` | Resolve per-call retry and deadline overrides before admission |
 | `HttpExchange` | Request construction, protected headers, one HTTP exchange including its body, and transport failure mapping |
+| `HttpHeaders` | Case-insensitive first-header lookup shared by retry parsing and request logging |
 | `CallSpec<T>` | Immutable endpoint, method, body and parser |
 | `Diagnostics` | Per-client filtering and delivery to the existing logger |
 | `RecordingJevClient` | Script selection, recording, atomic admission, and independently published results |
@@ -27,6 +28,10 @@ New helpers are package-private. Existing public internal classes retain their v
 The HTTP client's configuration and lifecycle inspection methods are package-private. Core tests
 reach them through `ClientTestAccess` in test sources only; this bridge is absent from the library
 JAR. Automatic-module names reserve stable identities but do not encapsulate internal packages.
+
+Small helpers remain local when their contracts differ: exception header copying accepts a null
+map, response metadata requires one, and transport cancellation can preserve a cause while
+operation cancellation has none. Avoid widening the public API merely to share these few lines.
 
 ## Thread and lock rules
 

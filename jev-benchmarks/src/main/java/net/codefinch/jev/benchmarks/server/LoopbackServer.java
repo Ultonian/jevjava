@@ -10,16 +10,24 @@ import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.atomic.AtomicLongArray;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
 
 /** Bounded, non-recording HTTP fixture. All bytes are synthetic and prepared before serving. */
 public final class LoopbackServer implements AutoCloseable {
+  /** One handler in this many contributes a CPU sample; reported totals are not extrapolated. */
+  public static final int CPU_SAMPLING_INTERVAL = 64;
+
   private static final int BODY_CAP = 1024 * 1024;
   private final HttpServer server;
   private final ThreadPoolExecutor executor;
@@ -35,8 +43,7 @@ public final class LoopbackServer implements AutoCloseable {
   private final int status;
   private final AtomicLong requests = new AtomicLong();
   private final AtomicLong failures = new AtomicLong();
-  private final java.util.concurrent.atomic.AtomicLongArray statuses =
-      new java.util.concurrent.atomic.AtomicLongArray(600);
+  private final AtomicLongArray statuses = new AtomicLongArray(600);
   private final AtomicLong serverCpuNanos = new AtomicLong();
   private final AtomicLong cpuSamples = new AtomicLong();
   private final AtomicLong queuedNanos = new AtomicLong();
@@ -58,7 +65,7 @@ public final class LoopbackServer implements AutoCloseable {
         || headerDelayMillis > 1000
         || bodyDelayMillis < 0
         || bodyDelayMillis > 1000
-        || !java.util.Set.of(200, 400, 429, 503).contains(status)) {
+        || !Set.of(200, 400, 429, 503).contains(status)) {
       throw new IllegalArgumentException("Invalid bounded server configuration");
     }
     response = Payloads.response(payload).getBytes(StandardCharsets.UTF_8);
@@ -75,7 +82,7 @@ public final class LoopbackServer implements AutoCloseable {
             Thread.ofPlatform().name("benchmark-server-", 0).factory(),
             (task, pool) -> {
               rejected.incrementAndGet();
-              throw new java.util.concurrent.RejectedExecutionException("Server queue full");
+              throw new RejectedExecutionException("Server queue full");
             });
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 256);
     server.setExecutor(
@@ -113,7 +120,7 @@ public final class LoopbackServer implements AutoCloseable {
   }
 
   private void handle(HttpExchange exchange) throws IOException {
-    boolean sampleCpu = requests.incrementAndGet() % 64 == 0;
+    boolean sampleCpu = requests.incrementAndGet() % CPU_SAMPLING_INTERVAL == 0;
     long cpuStart = sampleCpu ? cpuTime() : 0;
     peakActive.accumulateAndGet(active.incrementAndGet(), Math::max);
     try (exchange) {
@@ -222,14 +229,14 @@ public final class LoopbackServer implements AutoCloseable {
     result.put("executorQueueNanos", queuedNanos.get());
     result.put("sampledHandlerCpuNanos", serverCpuNanos.get());
     result.put("handlerCpuSamples", cpuSamples.get());
-    result.put("handlerCpuSamplingInterval", 64);
+    result.put("handlerCpuSamplingInterval", CPU_SAMPLING_INTERVAL);
     result.put(
         "handlerCpuInterpretation", "sum for every 64th request; not extrapolated total CPU");
     result.put("handlerCpuSupported", ManagementFactory.getThreadMXBean().isThreadCpuTimeEnabled());
     result.put("rejectedTasks", rejected.get());
     result.put("ioFailures", failures.get());
-    Map<String, Long> statusCounts = new java.util.TreeMap<>();
-    for (int code : java.util.List.of(200, 400, 404, 413, 429, 503)) {
+    Map<String, Long> statusCounts = new TreeMap<>();
+    for (int code : List.of(200, 400, 404, 413, 429, 503)) {
       statusCounts.put(Integer.toString(code), statuses.get(code));
     }
     result.put("headersSentByStatus", statusCounts);

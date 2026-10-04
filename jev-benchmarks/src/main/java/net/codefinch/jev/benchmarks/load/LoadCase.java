@@ -3,6 +3,8 @@ package net.codefinch.jev.benchmarks.load;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 /** Deliberately selected cells, not a Cartesian product of configuration dimensions. */
 public record LoadCase(Submission submission, int concurrency, Variant variant, boolean control) {
@@ -34,8 +36,8 @@ public record LoadCase(Submission submission, int concurrency, Variant variant, 
 
   /** Reject invalid cells before creating any client or server. */
   public LoadCase {
-    java.util.Objects.requireNonNull(submission);
-    java.util.Objects.requireNonNull(variant);
+    Objects.requireNonNull(submission);
+    Objects.requireNonNull(variant);
     if (!List.of(1, 8, 32, 128).contains(concurrency)
         || (variant == Variant.IMMEDIATE && (concurrency != 8 || control))
         || (variant == Variant.PLATFORM && submission != Submission.ASYNC)
@@ -47,11 +49,11 @@ public record LoadCase(Submission submission, int concurrency, Variant variant, 
   /** Stable file-safe cell identity. */
   public String id() {
     return (control ? "control-" : "sdk-")
-        + submission.name().toLowerCase(java.util.Locale.ROOT)
+        + submission.name().toLowerCase(Locale.ROOT)
         + "-"
         + concurrency
         + "-"
-        + variant.name().toLowerCase(java.util.Locale.ROOT);
+        + variant.name().toLowerCase(Locale.ROOT);
   }
 
   /** Prepared content shape. */

@@ -35,7 +35,7 @@ final class HttpExchange {
           "user-agent",
           "x-typesafe-sdk",
           "x-typesafe-runtime",
-          "x-typesafe-retry-count");
+          HttpJevClient.RETRY_COUNT_HEADER.toLowerCase(Locale.ROOT));
 
   private final ClientConfig config;
   private final Diagnostics diagnostics;

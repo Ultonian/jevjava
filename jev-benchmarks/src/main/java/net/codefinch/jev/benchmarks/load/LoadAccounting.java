@@ -1,5 +1,6 @@
 package net.codefinch.jev.benchmarks.load;
 
+import java.util.EnumMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -15,8 +16,8 @@ public final class LoadAccounting {
     OTHER
   }
 
-  private final Map<Outcome, LatencyHistogram> latency = new java.util.EnumMap<>(Outcome.class);
-  private final Map<Outcome, Long> outcomes = new java.util.EnumMap<>(Outcome.class);
+  private final Map<Outcome, LatencyHistogram> latency = new EnumMap<>(Outcome.class);
+  private final Map<Outcome, Long> outcomes = new EnumMap<>(Outcome.class);
   private long admitted;
   private long completed;
   private long inWindow;
@@ -71,7 +72,7 @@ public final class LoadAccounting {
     result.put("forcedCleanup", forced);
     result.put("terminalPerSecond", inWindow * 1e9 / windowNanos);
     result.put("successfulPerSecond", successesInWindow * 1e9 / windowNanos);
-    result.put("outcomes", new java.util.EnumMap<>(outcomes));
+    result.put("outcomes", new EnumMap<>(outcomes));
     Map<String, Object> histograms = new LinkedHashMap<>();
     latency.forEach((key, value) -> histograms.put(key.name(), value.snapshot()));
     result.put("latencyByOutcome", histograms);

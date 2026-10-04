@@ -17,6 +17,13 @@ repos:
       - id: mixed-line-ending
         args: ["--fix=lf"]
         exclude: ^mvnw\.cmd$
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.16.10
+    hooks:
+      - id: ruff-check
+        name: ruff (benchmark study scripts)
+        args: ["--config", "jev-benchmarks/scripts/ruff.toml"]
+        files: ^jev-benchmarks/scripts/.*\.py$
   - repo: local
     hooks:
       - id: trivy

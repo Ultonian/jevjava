@@ -21,7 +21,8 @@ import net.codefinch.jev.test.ScriptedAnswers;
  *
  * <p>Everything a reviewer needs to judge the behaviour — the questions and the thresholds — is in
  * this one file. Run against the real API with {@code TYPESAFE_API_KEY} set, or without a key
- * against {@link RecordingJevClient} with scripted answers:
+ * against {@link RecordingJevClient} with scripted answers. It is deliberately self-contained for
+ * jbang; the other examples share the {@code Examples} launcher helper:
  *
  * <pre>
  *   ./mvnw -q -DskipTests install &amp;&amp; ./mvnw -q -pl jev-examples exec:java
@@ -67,8 +68,10 @@ public final class TicketTriage {
   /** Department routing: auto-route only when the model is sure; confirm in the middle. */
   static final ConfidenceGate ROUTING = ConfidenceGate.of(0.5, 0.85);
 
-  /** Priority: severity dominates, refund requests add weight. */
+  /** Base priority: severity normalised to [0, 1]; confirmed refunds receive a separate boost. */
   static final Composite PRIORITY = Composite.score(Map.of("severity", 1.0));
+
+  private static final double REFUND_PRIORITY_BOOST = 0.25;
 
   private TicketTriage() {}
 
@@ -88,13 +91,16 @@ public final class TicketTriage {
           case CONFIRM -> "suggested " + department + "; agent confirms";
           case ESCALATE -> "unsure; triage queue";
         };
+    NoulThreshold.Decision refundDecision = REFUND.decide(a.noul("refund_requested"));
     String refund =
-        switch (REFUND.decide(a.noul("refund_requested"))) {
+        switch (refundDecision) {
           case YES -> "refund workflow";
           case NO -> "no refund";
           case UNSURE -> "ask the customer";
         };
-    double priority = PRIORITY.apply(a) + (a.noul("refund_requested").noul() > 0.8 ? 0.25 : 0);
+    double priority =
+        PRIORITY.apply(a)
+            + (refundDecision == NoulThreshold.Decision.YES ? REFUND_PRIORITY_BOOST : 0);
     return new Triage(department, routing, refund, Math.min(1.0, priority));
   }
 
@@ -108,6 +114,10 @@ public final class TicketTriage {
 
   static void run(JevClient client, PrintStream out, String source) {
     out.println("Source: " + source);
+    run(client, out);
+  }
+
+  static void run(JevClient client, PrintStream out) {
     for (String ticket : SAMPLE_TICKETS) {
       Triage t = triage(client, ticket);
       out.printf(

@@ -1,6 +1,7 @@
 package net.codefinch.jev.benchmarks.components;
 
 import java.util.concurrent.TimeUnit;
+import net.codefinch.jev.benchmarks.config.JvmSettings;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.patterns.NoulThreshold;
 import org.openjdk.jmh.annotations.Benchmark;
@@ -23,7 +24,7 @@ import org.openjdk.jmh.annotations.Warmup;
 @Measurement(iterations = 5, time = 1)
 @Fork(
     value = 3,
-    jvmArgs = {"-Xms512m", "-Xmx512m", "-XX:+UseG1GC"})
+    jvmArgs = {JvmSettings.MIN_HEAP, JvmSettings.MAX_HEAP, JvmSettings.GC})
 @State(Scope.Thread)
 public class ThresholdBenchmarks {
   /** Values below and at the two decision boundaries. */

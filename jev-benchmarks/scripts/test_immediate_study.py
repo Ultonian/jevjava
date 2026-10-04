@@ -1,12 +1,10 @@
 """Synthetic transport study validation; no measurement processes."""
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
+import immediate_study as study
 import test_executor_pilot as fixtures
-from test_study import load
-
-study = load("immediate_study", "immediate-study.py")
 
 
 class ImmediateStudyTest(unittest.TestCase):

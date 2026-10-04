@@ -1,7 +1,9 @@
 package net.codefinch.jev.benchmarks.diagnostics;
 
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.ParseException;
 import java.time.Instant;
 import java.util.List;
 import jdk.jfr.Event;
@@ -16,8 +18,7 @@ public final class RecordingProbe {
   private RecordingProbe() {}
 
   /** Receives only an output directory and harmless sentinel argument. */
-  public static void main(String[] args)
-      throws java.io.IOException, InterruptedException, java.text.ParseException {
+  public static void main(String[] args) throws IOException, InterruptedException, ParseException {
     if (args.length != 3 || !List.of("short", "long").contains(args[2])) {
       throw new IllegalArgumentException("Expected output, sentinel and short|long profile");
     }

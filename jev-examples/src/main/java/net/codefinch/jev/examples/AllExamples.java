@@ -19,10 +19,7 @@ public final class AllExamples {
 
   static final List<Example> ALL =
       List.of(
-          new Example(
-              "TicketTriage",
-              TicketTriage::scripted,
-              (c, out) -> TicketTriage.run(c, out, Examples.source())),
+          new Example("TicketTriage", TicketTriage::scripted, TicketTriage::run),
           new Example(
               "SupportTicketFanOut", SupportTicketFanOut::scripted, SupportTicketFanOut::run),
           new Example("ResumeScreening", ResumeScreening::scripted, ResumeScreening::run),

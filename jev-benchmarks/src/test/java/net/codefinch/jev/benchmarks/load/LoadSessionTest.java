@@ -3,7 +3,10 @@ package net.codefinch.jev.benchmarks.load;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import java.time.Duration;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -37,7 +40,7 @@ class LoadSessionTest {
       for (int i = 0; i < 2; i++) {
         var result = Json.toTree(session.cohort(Duration.ofMillis(100)));
         LoadTrial.validate(result, cell);
-        com.fasterxml.jackson.databind.node.ObjectNode corrupted = result.deepCopy();
+        ObjectNode corrupted = result.deepCopy();
         corrupted.put("drainCompletions", result.path("drainCompletions").asLong() + 1);
         assertThatThrownBy(() -> LoadTrial.validate(corrupted, cell))
             .isInstanceOf(IllegalStateException.class);
@@ -95,10 +98,10 @@ class LoadSessionTest {
                           CallObserver.Outcome.SUCCESS,
                           1,
                           Duration.ZERO,
-                          java.util.OptionalInt.of(200),
-                          java.util.Optional.empty(),
-                          java.util.Optional.empty(),
-                          java.util.Optional.empty())));
+                          OptionalInt.of(200),
+                          Optional.empty(),
+                          Optional.empty(),
+                          Optional.empty())));
       try {
         assertThat(entered.await(5, TimeUnit.SECONDS)).isTrue();
         observed.result("1", System.nanoTime());

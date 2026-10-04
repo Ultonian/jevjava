@@ -16,16 +16,6 @@ public interface Diagnostics {
   /** Logs a message with an exception if {@code level} passes this sink's filter. */
   void log(Level level, Supplier<String> message, Throwable thrown);
 
-  /** Drops everything. */
-  Diagnostics NONE =
-      new Diagnostics() {
-        @Override
-        public void log(Level level, Supplier<String> message) {}
-
-        @Override
-        public void log(Level level, Supplier<String> message, Throwable thrown) {}
-      };
-
   /** A sink writing to {@code logger} for messages at or above {@code minimum}. */
   static Diagnostics of(Logger logger, Level minimum) {
     return new Diagnostics() {

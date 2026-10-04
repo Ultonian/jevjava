@@ -17,6 +17,9 @@ baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Simplify retry handling and shared test fixtures; centralize benchmark JVM/load settings and
+  process cleanup. Benchmark study scripts now use importable modules while keeping their CLI
+  entry points and archive formats. Fixed study runs require an explicit `--cpus` selection.
 - Remove public access to the internal HTTP client's resolved configuration and lifecycle test
   hooks. Content copying and per-call policy resolution are now private/internal implementation
   details: `Content.Pure`, `Content.isContentType`, `RequestOptions.resolveRetry` and
@@ -45,6 +48,7 @@ baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references
   Spotless 3.10.3 still requires.
 
 ### Added
+- Scoped Ruff linting and CLI checks for benchmark study scripts, without timed workloads in CI.
 - `ScriptedAnswers.neutral(questions)` retains question context for `choice(id, label, probability,
   confidence)` and `score(id, score, confidence)` overrides without casts. Explicit-question and
   raw-answer overloads remain available, including for deliberately malformed fixtures.
@@ -55,6 +59,10 @@ baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references
 - Reproducible fixtures, recorded runtime/source identities, raw results and summaries, plus
   restricted JFR diagnostics and optional scripts for repeated studies and runtime comparisons.
   Runs need no live API credentials; CI checks the harness without running timed benchmarks.
+
+### Fixed
+- Apply ticket triage's refund priority boost at the same inclusive threshold as its refund
+  workflow, and print the source only once when running all examples.
 
 ### Security (Python 0.7.1 parity)
 - The API key is stripped of surrounding whitespace and validated when the client is built: an

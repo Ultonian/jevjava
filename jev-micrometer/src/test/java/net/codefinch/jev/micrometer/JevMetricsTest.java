@@ -72,41 +72,47 @@ class JevMetricsTest {
             Optional.of(new RuntimeException())));
 
     assertThat(
-            registry
-                .get("jev.attempt")
-                .tags("operation", "systemone", "status", "500", "attempt", "1", "outcome", "error")
-                .timer()
-                .count())
+            timerCount(
+                registry,
+                "jev.attempt",
+                "operation",
+                "systemone",
+                "status",
+                "500",
+                "attempt",
+                "1",
+                "outcome",
+                "error"))
         .isEqualTo(1);
     assertThat(
-            registry
-                .get("jev.attempt")
-                .tags("status", "200", "attempt", "2", "outcome", "success")
-                .timer()
-                .count())
+            timerCount(
+                registry, "jev.attempt", "status", "200", "attempt", "2", "outcome", "success"))
         .isEqualTo(1);
     assertThat(
-            registry
-                .get("jev.call")
-                .tags(
-                    "operation",
-                    "systemone",
-                    "outcome",
-                    "success",
-                    "status",
-                    "200",
-                    "model",
-                    "jev-1.13.0")
-                .timer()
-                .count())
+            timerCount(
+                registry,
+                "jev.call",
+                "operation",
+                "systemone",
+                "outcome",
+                "success",
+                "status",
+                "200",
+                "model",
+                "jev-1.13.0"))
         .isEqualTo(1);
     assertThat(
-            registry
-                .get("jev.call")
-                .tags(
-                    "operation", "models", "outcome", "error", "status", "n/a", "model", "unknown")
-                .timer()
-                .count())
+            timerCount(
+                registry,
+                "jev.call",
+                "operation",
+                "models",
+                "outcome",
+                "error",
+                "status",
+                "n/a",
+                "model",
+                "unknown"))
         .isEqualTo(1);
     assertThat(
             registry
@@ -200,5 +206,9 @@ class JevMetricsTest {
     assertThatThrownBy(() -> JevMetrics.builder(registry).prefix(" "))
         .hasMessageContaining("blank");
     assertThatThrownBy(() -> JevMetrics.builder(null)).isInstanceOf(NullPointerException.class);
+  }
+
+  private static long timerCount(SimpleMeterRegistry registry, String name, String... tags) {
+    return registry.get(name).tags(tags).timer().count();
   }
 }

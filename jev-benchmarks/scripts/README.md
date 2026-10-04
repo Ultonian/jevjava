@@ -1,14 +1,17 @@
 # Repeated benchmark studies
 
 These optional Python scripts run fixed protocols around the Java runners described in the
-[benchmark README](../README.md). They require Linux, Python 3.9+, `taskset`, and a clean committed
-checkout. Build and verify the JAR from that checkout before running; the scripts archive it and
+[benchmark README](../README.md). Running measurements requires Linux, Python 3.9+, `taskset`, CPU
+affinity support and a clean committed checkout. Archive audits and script tests need only Python
+3.9+. Build and verify the JAR from that checkout before running; the scripts archive it and
 the source, but cannot prove that a supplied JAR was built from the current source.
 
 Choose eight available physical cores with `lscpu -e=CPU,CORE,SOCKET,ONLINE`, account for their SMT
 siblings, and pass their CPU IDs explicitly with `--cpus`. Affinity does not reserve those cores.
 Finish all builds/tests first and keep the host otherwise idle. All output directories must be
-new and should live under the Git-ignored `jev-benchmarks/results/`.
+new and should live under the Git-ignored `jev-benchmarks/results/`. Fixed experiments require
+`--cpus`; there is no machine-specific default. Telemetry uses `/proc` and `/sys`; optional frequency,
+power and AMD P-state probes record `unavailable` when the host does not expose them.
 
 ## Fixed experiments
 
@@ -115,8 +118,16 @@ SD/CV across five A passes, each the mean of three fork rates. The two A/A pairs
 checks for false improvements; they cannot establish a confidence interval or practical threshold.
 Retain failed and unfavourable passes. Changing the protocol requires reviewing the analysis too.
 
-Fast script tests run in pre-commit/CI without timed workloads:
+## Maintaining the scripts
+
+Hyphenated filenames are stable CLI entry points. Their implementations live in importable
+modules with underscores; `study_support.py` owns shared identity, telemetry and process cleanup.
+Keep each fixed protocol's schedule and analysis together. Changes to the Java harness produce a
+new JAR identity: keep old archives intact and build fresh baselines before comparing SDK changes.
+
+Fast script tests and a pinned Ruff lint check run in pre-commit/CI without timed workloads:
 
 ```sh
 python3 -B -m unittest discover -s jev-benchmarks/scripts -v
+pre-commit run ruff-check --all-files
 ```

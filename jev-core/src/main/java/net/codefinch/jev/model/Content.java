@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.node.TextNode;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -69,7 +70,7 @@ public sealed interface Content
       default ->
           throw new IllegalArgumentException(
               "Content must be text, a JSON object, a JSON array or null; got a top-level "
-                  + node.getNodeType().name().toLowerCase(java.util.Locale.ROOT));
+                  + node.getNodeType().name().toLowerCase(Locale.ROOT));
     };
   }
 

@@ -32,14 +32,14 @@ public final class RetryAfter {
 
   /** Parses the delay from response headers, resolving HTTP-dates against {@code clock}. */
   public static Optional<Duration> parse(Map<String, List<String>> headers, Clock clock) {
-    String ms = first(headers, RETRY_AFTER_MS_HEADER);
+    String ms = HttpHeaders.first(headers, RETRY_AFTER_MS_HEADER);
     if (ms != null) {
       Optional<Duration> parsed = millis(ms, 1);
       if (parsed.isPresent()) {
         return parsed;
       }
     }
-    String seconds = first(headers, RETRY_AFTER_HEADER);
+    String seconds = HttpHeaders.first(headers, RETRY_AFTER_HEADER);
     if (seconds == null) {
       return Optional.empty();
     }
@@ -80,14 +80,5 @@ public final class RetryAfter {
     } catch (DateTimeParseException e) {
       return Optional.empty();
     }
-  }
-
-  private static String first(Map<String, List<String>> headers, String name) {
-    for (Map.Entry<String, List<String>> e : headers.entrySet()) {
-      if (name.equalsIgnoreCase(e.getKey()) && !e.getValue().isEmpty()) {
-        return e.getValue().get(0);
-      }
-    }
-    return null;
   }
 }

@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -92,7 +93,7 @@ public final class LoadDriver {
         if (future.isDone() && !future.isCancelled()) {
           try {
             future.get();
-          } catch (java.util.concurrent.ExecutionException e) {
+          } catch (ExecutionException e) {
             throw new IllegalStateException("Caller task failed", e.getCause());
           }
         }

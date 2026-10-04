@@ -36,7 +36,10 @@ public record NoulThreshold(double no, double yes) {
   /** A single cut-off: yes at or above it, no below (no unsure band). */
   public static NoulThreshold at(double cutoff) {
     Thresholds.requireUnit(cutoff, "cutoff");
-    return new NoulThreshold(Math.nextDown(cutoff) < 0 ? 0 : Math.nextDown(cutoff), cutoff);
+    // Adjacent representable doubles leave no UNSURE value between the thresholds.
+    // At zero every valid probability is YES, so the lower bound remains zero too.
+    double below = Math.max(0, Math.nextDown(cutoff));
+    return new NoulThreshold(below, cutoff);
   }
 
   /** The decision for a probability in {@code [0, 1]}. */

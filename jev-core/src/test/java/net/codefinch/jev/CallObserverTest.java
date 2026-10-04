@@ -1,5 +1,7 @@
 package net.codefinch.jev;
 
+import static net.codefinch.jev.HttpTestFixture.OK;
+import static net.codefinch.jev.HttpTestFixture.REQUEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -20,18 +22,11 @@ import net.codefinch.jev.exception.JevInternalServerException;
 import net.codefinch.jev.exception.JevResponseValidationException;
 import net.codefinch.jev.internal.Sleeper;
 import net.codefinch.jev.model.ModelList;
-import net.codefinch.jev.model.NoulQuestion;
-import net.codefinch.jev.model.Questions;
-import net.codefinch.jev.model.State;
-import net.codefinch.jev.model.SystemOneRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CallObserverTest {
-  private static final String OK = Fixtures.read("responses/docs-all-three.json");
-  private static final SystemOneRequest REQUEST =
-      SystemOneRequest.of(State.of("s"), Questions.of("q", NoulQuestion.of("?")));
 
   /** Records every event. */
   static final class Recording implements CallObserver {
@@ -49,23 +44,25 @@ class CallObserverTest {
     }
   }
 
+  private HttpTestFixture fixture;
   private TestServer server;
   private final Recording recording = new Recording();
 
   @BeforeEach
   void start() throws IOException {
-    server = new TestServer();
+    fixture = new HttpTestFixture();
+    server = fixture.server;
   }
 
   @AfterEach
   void stop() {
-    server.close();
+    fixture.close();
   }
 
   private JevClientBuilder client() {
-    return JevClient.builder()
+    return fixture
+        .client()
         .apiKey("k")
-        .baseUrl(server.baseUrl())
         .observer(recording)
         .sleeper((delay, handle) -> !handle.isCancelled());
   }
@@ -132,7 +129,7 @@ class CallObserverTest {
 
   @Test
   void transportFailureHasNoStatus() {
-    server.close();
+    fixture.close();
     try (JevClient c = client().retryPolicy(RetryPolicy.NONE).build()) {
       assertThatThrownBy(() -> c.models()).isInstanceOf(JevConnectionException.class);
     }

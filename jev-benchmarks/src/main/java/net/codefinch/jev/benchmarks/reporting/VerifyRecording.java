@@ -1,9 +1,12 @@
 package net.codefinch.jev.benchmarks.reporting;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
+import net.codefinch.jev.benchmarks.config.JvmSettings;
 import net.codefinch.jev.benchmarks.diagnostics.RecordingProbe;
 
 /** Explicit two-sided artifact-content check for the current JDK and packaged configuration. */
@@ -12,7 +15,7 @@ public final class VerifyRecording {
 
   /** Usage: {@code VerifyRecording NEW_OUTPUT_DIRECTORY [short|long]}. */
   public static void main(String[] args)
-      throws java.io.IOException, InterruptedException, java.net.URISyntaxException {
+      throws IOException, InterruptedException, URISyntaxException {
     if ((args.length != 1 && args.length != 2)
         || (args.length == 2 && !List.of("short", "long").contains(args[1]))) {
       throw new IllegalArgumentException("Expected new output directory and optional short|long");
@@ -30,10 +33,10 @@ public final class VerifyRecording {
     Files.createDirectory(output);
     RunLoad.runChild(
         List.of(
-            Path.of(System.getProperty("java.home"), "bin", "java").toString(),
-            "-Xms512m",
-            "-Xmx512m",
-            "-XX:+UseG1GC",
+            ChildJvm.executable(),
+            JvmSettings.MIN_HEAP,
+            JvmSettings.MAX_HEAP,
+            JvmSettings.GC,
             "-Djev.bench.sentinel=BENCH_SENTINEL_PROPERTY_7C92",
             "-cp",
             jar.toString(),

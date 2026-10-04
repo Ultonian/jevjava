@@ -1,22 +1,13 @@
 """Fast stdlib tests; no benchmark JVMs, builds or network requests."""
-import importlib.util
 import json
 import os
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
-
-def load(name, filename):
-    spec = importlib.util.spec_from_file_location(name, Path(__file__).with_name(filename))
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-analysis = load("analysis", "analyse-study.py")
-runner = load("runner", "run-study.py")
+import analyse_study as analysis
+import run_study as runner
 
 
 class StudyTest(unittest.TestCase):

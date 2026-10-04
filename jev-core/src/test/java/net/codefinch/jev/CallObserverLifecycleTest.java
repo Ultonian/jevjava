@@ -1,5 +1,7 @@
 package net.codefinch.jev;
 
+import static net.codefinch.jev.HttpTestFixture.OK;
+import static net.codefinch.jev.HttpTestFixture.REQUEST;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -15,37 +17,32 @@ import java.util.concurrent.TimeUnit;
 import net.codefinch.jev.exception.JevDeadlineExceededException;
 import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.model.ModelList;
-import net.codefinch.jev.model.NoulQuestion;
-import net.codefinch.jev.model.Questions;
-import net.codefinch.jev.model.State;
-import net.codefinch.jev.model.SystemOneRequest;
 import net.codefinch.jev.model.SystemOneResponse;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 class CallObserverLifecycleTest {
-  private static final String OK = Fixtures.read("responses/docs-all-three.json");
-  private static final SystemOneRequest REQUEST =
-      SystemOneRequest.of(State.of("s"), Questions.of("q", NoulQuestion.of("?")));
 
+  private HttpTestFixture fixture;
   private TestServer server;
   private final CallObserverTest.Recording recording = new CallObserverTest.Recording();
 
   @BeforeEach
   void start() throws IOException {
-    server = new TestServer();
+    fixture = new HttpTestFixture();
+    server = fixture.server;
   }
 
   @AfterEach
   void stop() {
-    server.close();
+    fixture.close();
   }
 
   private JevClientBuilder client() {
-    return JevClient.builder()
+    return fixture
+        .client()
         .apiKey("k")
-        .baseUrl(server.baseUrl())
         .observer(recording)
         .sleeper((delay, handle) -> !handle.isCancelled());
   }

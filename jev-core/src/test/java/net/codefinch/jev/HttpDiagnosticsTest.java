@@ -5,11 +5,14 @@ import static net.codefinch.jev.HttpTestFixture.REQUEST;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Handler;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
 import net.codefinch.jev.internal.ClientTestAccess;
 import net.codefinch.jev.internal.HttpJevClient;
 import org.junit.jupiter.api.AfterEach;
@@ -40,26 +43,8 @@ class HttpDiagnosticsTest {
   /** Review P2: every diagnostic honours the client's level; secrets never appear. */
   @Test
   void loggingHonoursTheClientLevelAndRedactsCredentials() {
-    java.util.logging.Logger jul =
-        java.util.logging.Logger.getLogger(HttpJevClient.class.getName());
-    List<java.util.logging.LogRecord> records = new ArrayList<>();
-    java.util.logging.Handler handler =
-        new java.util.logging.Handler() {
-          @Override
-          public void publish(java.util.logging.LogRecord r) {
-            records.add(r);
-          }
-
-          @Override
-          public void flush() {}
-
-          @Override
-          public void close() {}
-        };
-    java.util.logging.Level previous = jul.getLevel();
-    jul.setLevel(java.util.logging.Level.ALL);
-    jul.addHandler(handler);
-    try {
+    try (SdkLogCapture capture = new SdkLogCapture(HttpJevClient.class.getName())) {
+      List<LogRecord> records = capture.records;
       for (System.Logger.Level level :
           List.of(
               System.Logger.Level.OFF,
@@ -108,9 +93,6 @@ class HttpDiagnosticsTest {
           default -> throw new AssertionError(level);
         }
       }
-    } finally {
-      jul.removeHandler(handler);
-      jul.setLevel(previous);
     }
   }
 
@@ -142,26 +124,8 @@ class HttpDiagnosticsTest {
   /** Fix-review P2: DEBUG retry lines never carry server body text; TRACE may. */
   @Test
   void debugRetryLogsCarryNoBodyText() {
-    java.util.logging.Logger jul =
-        java.util.logging.Logger.getLogger(HttpJevClient.class.getName());
-    List<java.util.logging.LogRecord> records = new ArrayList<>();
-    java.util.logging.Handler handler =
-        new java.util.logging.Handler() {
-          @Override
-          public void publish(java.util.logging.LogRecord r) {
-            records.add(r);
-          }
-
-          @Override
-          public void flush() {}
-
-          @Override
-          public void close() {}
-        };
-    java.util.logging.Level previous = jul.getLevel();
-    jul.setLevel(java.util.logging.Level.ALL);
-    jul.addHandler(handler);
-    try {
+    try (SdkLogCapture capture = new SdkLogCapture(HttpJevClient.class.getName())) {
+      List<LogRecord> records = capture.records;
       for (System.Logger.Level level :
           List.of(
               System.Logger.Level.OFF,
@@ -206,9 +170,6 @@ class HttpDiagnosticsTest {
           default -> throw new AssertionError(level);
         }
       }
-    } finally {
-      jul.removeHandler(handler);
-      jul.setLevel(previous);
     }
   }
 
@@ -276,15 +237,13 @@ class HttpDiagnosticsTest {
 
   /** Captures every record on the SDK's logger namespace, whichever class emitted it. */
   private static final class SdkLogCapture implements AutoCloseable {
-    final List<java.util.logging.LogRecord> records =
-        new java.util.concurrent.CopyOnWriteArrayList<>();
-    private final java.util.logging.Logger jul =
-        java.util.logging.Logger.getLogger("net.codefinch.jev");
-    private final java.util.logging.Level previous = jul.getLevel();
-    private final java.util.logging.Handler handler =
-        new java.util.logging.Handler() {
+    final List<LogRecord> records = new CopyOnWriteArrayList<>();
+    private final Logger jul;
+    private final java.util.logging.Level previous;
+    private final Handler handler =
+        new Handler() {
           @Override
-          public void publish(java.util.logging.LogRecord r) {
+          public void publish(LogRecord r) {
             records.add(r);
           }
 
@@ -296,14 +255,18 @@ class HttpDiagnosticsTest {
         };
 
     SdkLogCapture() {
+      this("net.codefinch.jev");
+    }
+
+    SdkLogCapture(String loggerName) {
+      jul = Logger.getLogger(loggerName);
+      previous = jul.getLevel();
       jul.setLevel(java.util.logging.Level.ALL);
       jul.addHandler(handler);
     }
 
     String messages() {
-      return records.stream()
-          .map(java.util.logging.LogRecord::getMessage)
-          .reduce("", (a, b) -> a + "\n" + b);
+      return records.stream().map(LogRecord::getMessage).reduce("", (a, b) -> a + "\n" + b);
     }
 
     @Override

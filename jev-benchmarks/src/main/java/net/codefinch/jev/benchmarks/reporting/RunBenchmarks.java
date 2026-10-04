@@ -12,12 +12,13 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import net.codefinch.jev.benchmarks.config.JvmSettings;
 import net.codefinch.jev.benchmarks.fixtures.Payloads;
 import net.codefinch.jev.internal.Json;
 
 /** Runs a controlled JMH process and saves its results, identities and allowlisted metadata. */
 public final class RunBenchmarks {
-  private static final List<String> VM_OPTIONS = List.of("-Xms512m", "-Xmx512m", "-XX:+UseG1GC");
+  private static final List<String> VM_OPTIONS = JvmSettings.OPTIONS;
 
   private RunBenchmarks() {}
 
@@ -70,9 +71,9 @@ public final class RunBenchmarks {
       RunMetadata.writeJson(output.resolve("manifest.json"), manifest);
       throw e;
     }
-    Thread cleanup = new Thread(() -> stop(process), "benchmark-cleanup");
-    Runtime.getRuntime().addShutdownHook(cleanup);
+    Thread cleanup = new Thread(() -> ChildJvm.stop(process), "benchmark-cleanup");
     try {
+      Runtime.getRuntime().addShutdownHook(cleanup);
       if (!process.waitFor(60, TimeUnit.MINUTES)) {
         throw new IllegalStateException("JMH exceeded the 60-minute watchdog");
       }
@@ -90,7 +91,7 @@ public final class RunBenchmarks {
       manifest.put(
           "resultSha256", Payloads.hash(Files.readAllBytes(output.resolve("results.json"))));
     } finally {
-      stop(process);
+      ChildJvm.stop(process);
       try {
         Runtime.getRuntime().removeShutdownHook(cleanup);
       } catch (IllegalStateException ignored) {
@@ -107,7 +108,7 @@ public final class RunBenchmarks {
 
   static List<String> command(Path jar, Path output, Settings settings) {
     List<String> command = new ArrayList<>();
-    command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+    command.add(ChildJvm.executable());
     command.addAll(VM_OPTIONS);
     command.addAll(
         List.of(
@@ -153,13 +154,6 @@ public final class RunBenchmarks {
     }
     clean.put("LANG", "C.UTF-8");
     return clean;
-  }
-
-  private static void stop(Process process) {
-    process.descendants().forEach(ProcessHandle::destroyForcibly);
-    if (process.isAlive()) {
-      process.destroyForcibly();
-    }
   }
 
   /** Closed set of launch options; arbitrary JVM flags are deliberately not forwarded. */

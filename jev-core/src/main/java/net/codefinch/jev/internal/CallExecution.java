@@ -24,6 +24,7 @@ import net.codefinch.jev.exception.JevDeadlineExceededException;
 import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.exception.JevInterruptedException;
 import net.codefinch.jev.exception.JevRateLimitException;
+import net.codefinch.jev.model.ResponseMetadata;
 import net.codefinch.jev.model.SystemOneResponse;
 
 /**
@@ -77,6 +78,7 @@ final class CallExecution<T> {
     this.submittedAt = config.nanoTime().getAsLong();
     this.deadlineAt = deadline.map(d -> submittedAt + d.toNanos());
     if (future != null) {
+      // Link cancellation only after options resolve; the future has not escaped construction.
       future.call = this;
     }
   }
@@ -157,8 +159,8 @@ final class CallExecution<T> {
    * outcome is published, so {@link HttpJevClient#close()} can still see it in the hand-off gap.
    */
   private boolean claimOutcome() {
-    synchronized (
-        this) { // atomic with startAttempt(): termination and attempt start never interleave
+    // Atomic with startAttempt(): termination and attempt start never interleave.
+    synchronized (this) {
       if (!outcomeClaimed.compareAndSet(false, true)) {
         return false;
       }
@@ -178,7 +180,7 @@ final class CallExecution<T> {
   private CompletableFuture<Runnable> startAttempt(int attempt) {
     synchronized (this) {
       if (outcomeClaimed.get() || handle.isCancelled()) {
-        throw cancelled(null);
+        throw cancelled();
       }
       attempts = attempt + 1;
       return config.observers().isEmpty() ? null : reserveObserverSlot();
@@ -342,42 +344,47 @@ final class CallExecution<T> {
       try {
         return attempt(attempt, budget, slot);
       } catch (JevException e) {
-        last = e;
-        checkCancelled();
-        if (e instanceof JevInterruptedException) {
-          throw e;
-        }
-        if (deadlineAt.isPresent() && deadlineAt.get() - config.nanoTime().getAsLong() <= 0) {
-          throw deadlineExceeded(attempt + 1, e);
-        }
-        if (attempt >= retry.maxRetries() || !retry.isRetryable(e)) {
-          throw e;
-        }
-        Duration delay = retry.delay(attempt, serverDelay(e), config.random());
-        if (deadlineAt.isPresent()
-            && config.nanoTime().getAsLong() + delay.toNanos() >= deadlineAt.get()) {
-          throw deadlineExceeded(attempt + 1, e);
-        }
-        final int attemptNumber = attempts;
-        final int retriesTotal = retry.maxRetries();
-        log(
-            Level.INFO,
-            () ->
-                spec.endpoint()
-                    + " retrying in "
-                    + delay.toMillis()
-                    + "ms (retry "
-                    + attemptNumber
-                    + "/"
-                    + retriesTotal
-                    + ") after "
-                    + describe(e));
-        log(
-            Level.DEBUG,
-            () -> spec.endpoint() + " attempt " + attemptNumber + " failure: " + e.getMessage());
-        sleep(delay);
+        sleep(nextDelayOrThrow(attempt, e));
       }
     }
+  }
+
+  /** Preserves cancellation, deadline and retry precedence before choosing the next delay. */
+  private Duration nextDelayOrThrow(int attempt, JevException e) {
+    last = e;
+    checkCancelled();
+    if (e instanceof JevInterruptedException) {
+      throw e;
+    }
+    if (deadlineAt.isPresent() && deadlineAt.get() - config.nanoTime().getAsLong() <= 0) {
+      throw deadlineExceeded(attempt + 1, e);
+    }
+    if (attempt >= retry.maxRetries() || !retry.isRetryable(e)) {
+      throw e;
+    }
+    Duration delay = retry.delay(attempt, serverDelay(e), config.random());
+    if (deadlineAt.isPresent()
+        && config.nanoTime().getAsLong() + delay.toNanos() >= deadlineAt.get()) {
+      throw deadlineExceeded(attempt + 1, e);
+    }
+    final int attemptNumber = attempts;
+    final int retriesTotal = retry.maxRetries();
+    log(
+        Level.INFO,
+        () ->
+            spec.endpoint()
+                + " retrying in "
+                + delay.toMillis()
+                + "ms (retry "
+                + attemptNumber
+                + "/"
+                + retriesTotal
+                + ") after "
+                + describe(e));
+    log(
+        Level.DEBUG,
+        () -> spec.endpoint() + " attempt " + attemptNumber + " failure: " + e.getMessage());
+    return delay;
   }
 
   /**
@@ -393,7 +400,7 @@ final class CallExecution<T> {
       HttpResponse<String> response = exchange.execute(spec, options, handle, attempt, budget);
       status = response.statusCode();
       lastStatus = status;
-      return handle(response, started);
+      return parseResponse(response, started);
     } catch (Throwable t) {
       failure = t;
       throw t;
@@ -402,7 +409,7 @@ final class CallExecution<T> {
     }
   }
 
-  private T handle(HttpResponse<String> response, long started) {
+  private T parseResponse(HttpResponse<String> response, long started) {
     Map<String, List<String>> headers = response.headers().map();
     String body = response.body();
     long elapsedMs = (config.nanoTime().getAsLong() - started) / 1_000_000;
@@ -415,7 +422,9 @@ final class CallExecution<T> {
                 + " in "
                 + elapsedMs
                 + " ms request_id="
-                + firstHeader(headers, "x-typesafe-request-id").orElse("-"));
+                + Optional.ofNullable(
+                        HttpHeaders.first(headers, ResponseMetadata.REQUEST_ID_HEADER))
+                    .orElse("-"));
     log(Level.DEBUG, () -> "<- headers " + Redaction.headers(headers) + " body " + body);
     int status = response.statusCode();
     if (status >= 200 && status < 300) {
@@ -427,7 +436,7 @@ final class CallExecution<T> {
   private void sleep(Duration delay) {
     try {
       if (!config.sleeper().sleep(delay, handle)) {
-        throw cancelled(null);
+        throw cancelled();
       }
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
@@ -437,16 +446,12 @@ final class CallExecution<T> {
 
   private void checkCancelled() {
     if (handle.isCancelled()) {
-      throw cancelled(null);
+      throw cancelled();
     }
   }
 
-  private CancellationException cancelled(Throwable cause) {
-    CancellationException e = new CancellationException(spec.endpoint() + ": call cancelled");
-    if (cause != null) {
-      e.initCause(cause);
-    }
-    return e;
+  private CancellationException cancelled() {
+    return new CancellationException(spec.endpoint() + ": call cancelled");
   }
 
   private JevDeadlineExceededException deadlineExceeded(int attempts, JevException last) {
@@ -516,15 +521,6 @@ final class CallExecution<T> {
   /** Logs through this client's diagnostic sink (its configured level applies). */
   private void log(Level level, Supplier<String> message) {
     diagnostics.log(level, message);
-  }
-
-  private static Optional<String> firstHeader(Map<String, List<String>> headers, String name) {
-    for (Map.Entry<String, List<String>> e : headers.entrySet()) {
-      if (name.equalsIgnoreCase(e.getKey()) && !e.getValue().isEmpty()) {
-        return Optional.of(e.getValue().get(0));
-      }
-    }
-    return Optional.empty();
   }
 
   private static Duration min(Duration a, Duration b) {

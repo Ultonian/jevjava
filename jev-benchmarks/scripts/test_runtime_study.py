@@ -1,13 +1,11 @@
 """Fixed interleaved schedule, runtime attribution and historical audit contract tests."""
 import collections
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
+import runtime_study as study
 import test_executor_pilot as fixtures
-from test_study import load
-
-study = load("runtime_study", "runtime-study.py")
 
 
 class RuntimeStudyTest(unittest.TestCase):

@@ -12,8 +12,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import net.codefinch.jev.JevClient;
@@ -31,10 +33,12 @@ import net.codefinch.jev.model.NoulAnswer;
 import net.codefinch.jev.model.NoulQuestion;
 import net.codefinch.jev.model.Questions;
 import net.codefinch.jev.model.ResponseMetadata;
+import net.codefinch.jev.model.ScoreAnswer;
 import net.codefinch.jev.model.ScoreQuestion;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.model.SystemOneRequest;
 import net.codefinch.jev.model.SystemOneResponse;
+import org.assertj.core.data.Offset;
 import org.junit.jupiter.api.Test;
 
 class RecordingJevClientTest {
@@ -89,7 +93,7 @@ class RecordingJevClientTest {
       assertThat(first.answers().noul("refund").noul()).isEqualTo(0.95);
       assertThat(first.answers().choice("dept").choice()).isEqualTo("support");
       assertThat(first.answers().choice("dept").probabilities().get("billing"))
-          .isCloseTo(0.1, org.assertj.core.data.Offset.offset(1e-9));
+          .isCloseTo(0.1, Offset.offset(1e-9));
       assertThat(first.answers().score("severity").score()).isEqualTo(2.0);
       assertThat(first.model()).isEqualTo("jev-1.13.0");
       assertThat(first.usage().inputTokens()).isEqualTo(10);
@@ -119,11 +123,20 @@ class RecordingJevClientTest {
   }
 
   @Test
-  void replacementDefaultResponderAndModels() throws Exception {
+  void replacementDefaultResponder() {
     try (RecordingJevClient c = new RecordingJevClient()) {
       c.respondWith(req -> ScriptedAnswers.empty().put("refund", new NoulAnswer(0.99)).build());
       assertThat(c.systemOne(REQUEST).answers().noul("refund").noul()).isEqualTo(0.99);
       assertThat(c.systemOne(REQUEST).answers().get("dept")).isEmpty();
+      assertThat(c.calls())
+          .extracting(RecordedCall::operation)
+          .containsExactly("systemone", "systemone");
+    }
+  }
+
+  @Test
+  void defaultAndReplacementModelsResponses() throws Exception {
+    try (RecordingJevClient c = new RecordingJevClient()) {
       assertThat(c.models().models()).extracting(ModelMetadata::name).containsExactly("jev-latest");
       c.modelsResponse(List.of(new ModelMetadata("x", "d", "2026-02-02")));
       assertThat(c.modelsAsync().get(2, TimeUnit.SECONDS).models())
@@ -136,8 +149,8 @@ class RecordingJevClientTest {
       assertThat(c.models().models()).extracting(ModelMetadata::name).containsExactly("y");
       assertThat(c.calls())
           .extracting(RecordedCall::operation)
-          .containsExactly("systemone", "systemone", "models", "models", "models");
-      assertThatThrownBy(() -> c.calls().get(2).systemOneRequest())
+          .containsExactly("models", "models", "models");
+      assertThatThrownBy(() -> c.calls().get(0).systemOneRequest())
           .isInstanceOf(IllegalStateException.class);
     }
   }
@@ -170,11 +183,7 @@ class RecordingJevClientTest {
     c.respondWith(
         req -> {
           inResponder.countDown();
-          try {
-            release.await(10, TimeUnit.SECONDS);
-          } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-          }
+          awaitRelease(release);
           responderFinished.set(true);
           return ScriptedAnswers.neutralResponse(req.questions());
         });
@@ -196,16 +205,12 @@ class RecordingJevClientTest {
   }
 
   @Test
-  void userCancellationStopsPublicationAndSameThreadExecutorIsSynchronous() throws Exception {
+  void userCancellationStopsPublication() throws Exception {
     CountDownLatch release = new CountDownLatch(1);
     try (RecordingJevClient c = new RecordingJevClient()) {
       c.respondWith(
           req -> {
-            try {
-              release.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-            }
+            awaitRelease(release);
             return ScriptedAnswers.neutralResponse(req.questions());
           });
       CompletableFuture<SystemOneResponse> f = c.systemOneAsync(REQUEST);
@@ -214,6 +219,10 @@ class RecordingJevClientTest {
       Thread.sleep(50);
       assertThat(f.isCancelled()).isTrue();
     }
+  }
+
+  @Test
+  void sameThreadExecutorPublishesTheResultAsynchronously() throws Exception {
     try (RecordingJevClient sync = new RecordingJevClient(Clock.systemUTC(), Runnable::run)) {
       CompletableFuture<SystemOneResponse> f = sync.systemOneAsync(REQUEST);
       assertThat(f.get(2, TimeUnit.SECONDS).answers().noul("refund").noul())
@@ -223,8 +232,8 @@ class RecordingJevClientTest {
   }
 
   /** Captures async tasks without running them, so admission and close can be interleaved. */
-  static final class CapturingExecutor implements java.util.concurrent.Executor {
-    final List<Runnable> tasks = new java.util.concurrent.CopyOnWriteArrayList<>();
+  static final class CapturingExecutor implements Executor {
+    final List<Runnable> tasks = new CopyOnWriteArrayList<>();
 
     @Override
     public void execute(Runnable r) {
@@ -260,7 +269,7 @@ class RecordingJevClientTest {
     // Stress: submissions racing close() are each either rejected or cancelled, never lost.
     CapturingExecutor executor2 = new CapturingExecutor();
     RecordingJevClient c2 = new RecordingJevClient(Clock.systemUTC(), executor2);
-    List<CompletableFuture<?>> futures = new java.util.concurrent.CopyOnWriteArrayList<>();
+    List<CompletableFuture<?>> futures = new CopyOnWriteArrayList<>();
     AtomicBoolean stop = new AtomicBoolean();
     Thread submitter =
         new Thread(
@@ -299,17 +308,13 @@ class RecordingJevClientTest {
     CompletableFuture<ModelList> b = c.modelsAsync();
     CountDownLatch entered = new CountDownLatch(2);
     CountDownLatch release = new CountDownLatch(1);
-    List<Thread> callbackThreads = new java.util.concurrent.CopyOnWriteArrayList<>();
+    List<Thread> callbackThreads = new CopyOnWriteArrayList<>();
     for (CompletableFuture<ModelList> f : List.of(a, b)) {
       f.whenComplete(
           (r, t) -> {
             callbackThreads.add(Thread.currentThread());
             entered.countDown();
-            try {
-              release.await(10, TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-              Thread.currentThread().interrupt();
-            }
+            awaitRelease(release);
           });
     }
     Thread closer = new Thread(c::close, "fake-closer");
@@ -335,7 +340,7 @@ class RecordingJevClientTest {
     // executor. The callback is registered before the captured task runs, so it cannot run inline.
     CapturingExecutor executor2 = new CapturingExecutor();
     CountDownLatch done = new CountDownLatch(1);
-    List<Thread> normal = new java.util.concurrent.CopyOnWriteArrayList<>();
+    List<Thread> normal = new CopyOnWriteArrayList<>();
     try (RecordingJevClient c2 = new RecordingJevClient(Clock.systemUTC(), executor2)) {
       CompletableFuture<ModelList> f = c2.modelsAsync();
       f.whenComplete(
@@ -508,16 +513,20 @@ class RecordingJevClientTest {
     assertThat(parsed.answers()).isEqualTo(built.answers());
     assertThat(parsed.requestId()).contains("req-1");
     Map<String, Answer> answers = parsed.answers().asMap();
-    assertThat(answers.get("sev")).isInstanceOf(net.codefinch.jev.model.ScoreAnswer.class);
-    assertThat(((net.codefinch.jev.model.ScoreAnswer) answers.get("sev")).legend().get(1))
-        .isEqualTo(Content.of("high"));
+    assertThat(answers.get("sev")).isInstanceOf(ScoreAnswer.class);
+    assertThat(((ScoreAnswer) answers.get("sev")).legend().get(1)).isEqualTo(Content.of("high"));
+  }
 
-    ModelList models = new RecordingJevClient().models();
-    ModelList parsedModels =
-        ResponseParser.parseModels(200, Map.of(), models.metadata().rawBody(), "test");
-    assertThat(parsedModels.models())
-        .as("default models body matches its typed list")
-        .isEqualTo(models.models());
+  @Test
+  void defaultModelsBodyRoundTripsThroughTheCoreParser() throws Exception {
+    try (RecordingJevClient client = new RecordingJevClient()) {
+      ModelList models = client.models();
+      ModelList parsedModels =
+          ResponseParser.parseModels(200, Map.of(), models.metadata().rawBody(), "test");
+      assertThat(parsedModels.models())
+          .as("default models body matches its typed list")
+          .isEqualTo(models.models());
+    }
   }
 
   @Test
@@ -545,5 +554,13 @@ class RecordingJevClientTest {
                 .probabilities())
         .containsEntry("only", 1.0);
     assertThat(ScriptedAnswers.neutralAnswer(NoulQuestion.of("?"))).isInstanceOf(NoulAnswer.class);
+  }
+
+  private static void awaitRelease(CountDownLatch release) {
+    try {
+      release.await(10, TimeUnit.SECONDS);
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+    }
   }
 }

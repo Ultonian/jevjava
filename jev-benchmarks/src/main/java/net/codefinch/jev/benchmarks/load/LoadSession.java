@@ -10,6 +10,7 @@ import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -29,7 +30,7 @@ import net.codefinch.jev.model.SystemOneResponse;
 
 /** One owned client/server lifetime, sharing prepared input across separate drained cohorts. */
 public final class LoadSession implements AutoCloseable {
-  private static final Duration DRAIN = Duration.ofSeconds(5);
+  private static final Duration DRAIN = LoadSettings.DRAIN;
   private final LoadCase cell;
   private final LoopbackServer server;
   private final SystemOneRequest request;
@@ -69,7 +70,7 @@ public final class LoadSession implements AutoCloseable {
                     .uri()
                     .resolve(
                         cell.variant() == LoadCase.Variant.MODELS ? "/v1/models" : "/v1/systemone"))
-            .timeout(Duration.ofSeconds(15))
+            .timeout(LoadSettings.ATTEMPT_TIMEOUT)
             .header("Authorization", "Bearer benchmark-dummy")
             .header("Content-Type", "application/json");
     controlRequest =
@@ -92,8 +93,8 @@ public final class LoadSession implements AutoCloseable {
             .defaultModel("jev-latest")
             .logLevel(cell.variant() == LoadCase.Variant.LOGGING ? Level.INFO : Level.WARNING)
             .retryPolicy(RetryPolicy.NONE)
-            .timeout(Duration.ofSeconds(15))
-            .deadline(Duration.ofSeconds(20))
+            .timeout(LoadSettings.ATTEMPT_TIMEOUT)
+            .deadline(LoadSettings.DEADLINE)
             .closeGracePeriod(Duration.ofSeconds(1))
             .publicationTimeout(Duration.ofSeconds(2));
     if (operations != null) {
@@ -119,7 +120,7 @@ public final class LoadSession implements AutoCloseable {
   private static HttpClient newTransport() {
     return HttpClient.newBuilder()
         .followRedirects(HttpClient.Redirect.NEVER)
-        .connectTimeout(Duration.ofSeconds(15))
+        .connectTimeout(LoadSettings.ATTEMPT_TIMEOUT)
         .build();
   }
 
@@ -160,7 +161,7 @@ public final class LoadSession implements AutoCloseable {
             "sampledHandlerCpuNanos",
                 counterDelta(beforeServer, afterServer, "sampledHandlerCpuNanos"),
             "handlerCpuSamples", counterDelta(beforeServer, afterServer, "handlerCpuSamples"),
-            "handlerCpuSamplingInterval", 64,
+            "handlerCpuSamplingInterval", LoopbackServer.CPU_SAMPLING_INTERVAL,
             "executorQueueNanos", counterDelta(beforeServer, afterServer, "executorQueueNanos"),
             "executorTasks", counterDelta(beforeServer, afterServer, "executorTasks"),
             "peaksScope",
@@ -273,7 +274,7 @@ public final class LoadSession implements AutoCloseable {
     if (failure instanceof net.codefinch.jev.exception.JevDeadlineExceededException) {
       return LoadAccounting.Outcome.DEADLINE;
     }
-    if (failure instanceof java.util.concurrent.CancellationException
+    if (failure instanceof CancellationException
         || failure instanceof net.codefinch.jev.exception.JevInterruptedException) {
       return LoadAccounting.Outcome.CANCELLED;
     }

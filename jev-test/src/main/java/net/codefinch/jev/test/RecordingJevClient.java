@@ -32,15 +32,18 @@ import net.codefinch.jev.model.SystemOneResponse;
  * responder ({@link ScriptedAnswers#neutralResponse(net.codefinch.jev.model.Questions)} unless
  * replaced). Every call is recorded with its request and options.
  *
- * <p>Lifecycle follows the {@link JevClient} contract the HTTP client implements: synchronous calls
- * run on the caller's thread; asynchronous calls run their responder on an executor (a fresh
- * virtual thread each by default) and return at once, registered atomically with admission;
- * completions — results and cancellations alike — are published on a fresh virtual thread, never on
- * the responder executor or the closing thread; cancelling the returned future stops its result
- * from being published; calls after {@link #close()} throw {@link IllegalStateException}; and
- * {@code close()} completes every outstanding future with {@link CancellationException}, waiting
- * only for publication (never for continuations), so a responder that finishes later is discarded.
- * Thread-safe.
+ * <p>Thread-safe; lifecycle follows the {@link JevClient} contract:
+ *
+ * <ul>
+ *   <li>Synchronous responders run on the caller; async responders run on an executor (a fresh
+ *       virtual thread by default), registered atomically with admission.
+ *   <li>Results and shutdown cancellations are published on fresh virtual threads, independently of
+ *       the responder executor and closing thread.
+ *   <li>Cancelling the returned future prevents the responder's result from being published.
+ *   <li>Calls after {@link #close()} throw {@link IllegalStateException}.
+ *   <li>Close publishes {@link CancellationException} to outstanding futures and waits only for
+ *       publication, never for continuations. Late responder results are discarded.
+ * </ul>
  */
 public final class RecordingJevClient implements JevClient {
 
@@ -151,7 +154,8 @@ public final class RecordingJevClient implements JevClient {
 
   /** The {@code systemone} requests so far, in order. */
   public List<SystemOneRequest> requests() {
-    return List.copyOf(calls).stream().flatMap(c -> c.request().stream()).toList();
+    // CopyOnWriteArrayList supplies a snapshot spliterator; toList returns an immutable result.
+    return calls.stream().flatMap(c -> c.request().stream()).toList();
   }
 
   /** The last call, if any. Reads one consistent snapshot. */
