@@ -25,27 +25,35 @@ import net.codefinch.jev.model.Usage;
  * (every question answered at its midpoint) or from scratch, override individual ids, and build a
  * {@link SystemOneResponse}. Answers are shaped from the questions, so a choice answer's
  * probabilities cover exactly the requested labels and a score answer's legend matches the rubric.
+ *
+ * <p>Numeric values are not range-validated: scripts can deliberately exercise malformed responses.
+ * For realistic answers, use finite probabilities/confidence in {@code [0, 1]} and scores within
+ * the rubric. Raw answer overloads and {@link #put(String, Answer)} also allow arbitrary fixtures.
  */
 public final class ScriptedAnswers {
+  private final Map<String, Question> questions;
   private final Map<String, Answer> answers = new LinkedHashMap<>();
   private String model = "jev-test";
   private Usage usage = new Usage(0, 0);
   private Map<String, List<String>> headers = Map.of();
 
-  private ScriptedAnswers() {}
+  private ScriptedAnswers(Map<String, Question> questions) {
+    this.questions = Map.copyOf(questions);
+  }
 
-  /** An empty script; add answers with the {@code noul}/{@code choice}/{@code score} methods. */
+  /** An empty script without question context; use explicit-question or raw-answer overloads. */
   public static ScriptedAnswers empty() {
-    return new ScriptedAnswers();
+    return new ScriptedAnswers(Map.of());
   }
 
   /**
    * A neutral answer for every question: noul 0.5; choice = the first label with uniform
-   * probabilities; score = the midpoint level with uniform probabilities; confidence 0.5.
+   * probabilities; score = the midpoint level with uniform probabilities; confidence 0.5. Retains
+   * the immutable question definitions for subsequent id-only choice and score overrides.
    */
   public static ScriptedAnswers neutral(Questions questions) {
     Objects.requireNonNull(questions, "questions");
-    ScriptedAnswers s = new ScriptedAnswers();
+    ScriptedAnswers s = new ScriptedAnswers(questions.asMap());
     questions.asMap().forEach((id, q) -> s.answers.put(id, neutralAnswer(q)));
     return s;
   }
@@ -72,6 +80,19 @@ public final class ScriptedAnswers {
   }
 
   /**
+   * Overrides a choice using the question retained by {@link #neutral(Questions)}.
+   *
+   * @throws IllegalArgumentException if the id has no retained choice question or the label is not
+   *     one of its options
+   */
+  public ScriptedAnswers choice(String id, String label, double probability, double confidence) {
+    if (!(questions.get(Objects.requireNonNull(id, "id")) instanceof ChoiceQuestion question)) {
+      throw new IllegalArgumentException("no retained choice question for id '" + id + "'");
+    }
+    return choice(id, question, label, probability, confidence);
+  }
+
+  /**
    * Sets a choice answer for a question, putting {@code probability} on {@code label} and the
    * remainder spread evenly over the other labels.
    */
@@ -95,6 +116,18 @@ public final class ScriptedAnswers {
   public ScriptedAnswers choice(String id, ChoiceAnswer answer) {
     answers.put(id, answer);
     return this;
+  }
+
+  /**
+   * Overrides a score using the rubric retained by {@link #neutral(Questions)}.
+   *
+   * @throws IllegalArgumentException if the id has no retained score question
+   */
+  public ScriptedAnswers score(String id, double score, double confidence) {
+    if (!(questions.get(Objects.requireNonNull(id, "id")) instanceof ScoreQuestion question)) {
+      throw new IllegalArgumentException("no retained score question for id '" + id + "'");
+    }
+    return score(id, question, score, confidence);
   }
 
   /** Sets a score answer for a question at the given position, with a legend from the rubric. */

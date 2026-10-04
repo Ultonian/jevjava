@@ -131,8 +131,6 @@ class ExamplesTest {
   /** R3 finding 4: CONFIRM never produces an automatic outcome, at both gate boundaries. */
   @Test
   void entityAlignmentRespectsTheConfirmBand() {
-    net.codefinch.jev.model.ScoreQuestion link =
-        (net.codefinch.jev.model.ScoreQuestion) EntityAlignment.QUESTIONS.asMap().get("link_state");
     double[][] cases = {{0.49, 0}, {0.5, 1}, {0.699, 1}, {0.7, 2}};
     String[] expected = {
       "curator queue (uncertain)",
@@ -146,7 +144,7 @@ class ExamplesTest {
         fake.respondWith(
             req ->
                 net.codefinch.jev.test.ScriptedAnswers.neutral(req.questions())
-                    .score("link_state", link, 1.9, confidence)
+                    .score("link_state", 1.9, confidence)
                     .build());
         assertThat(EntityAlignment.align(fake, EntityAlignment.SAMPLE_PAIRS.get(0)).decision())
             .as("confidence " + confidence)

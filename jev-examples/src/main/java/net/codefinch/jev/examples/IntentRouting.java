@@ -5,9 +5,7 @@ import java.util.List;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.ChoiceCriteria;
-import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.Questions;
-import net.codefinch.jev.model.ScoreQuestion;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.test.RecordingJevClient;
@@ -81,25 +79,23 @@ public final class IntentRouting {
   }
 
   static RecordingJevClient scripted() {
-    ChoiceQuestion intent = (ChoiceQuestion) QUESTIONS.asMap().get("intent");
-    ScoreQuestion complexity = (ScoreQuestion) QUESTIONS.asMap().get("complexity");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "order_status", 0.95, 0.94)
-                .score("complexity", complexity, 0.1, 0.9))
+                .choice("intent", "order_status", 0.95, 0.94)
+                .score("complexity", 0.1, 0.9))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "product_question", 0.9, 0.88)
-                .score("complexity", complexity, 0.6, 0.7))
+                .choice("intent", "product_question", 0.9, 0.88)
+                .score("complexity", 0.6, 0.7))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "return_exchange", 0.92, 0.9)
-                .score("complexity", complexity, 0.4, 0.8))
+                .choice("intent", "return_exchange", 0.92, 0.9)
+                .score("complexity", 0.4, 0.8))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "complaint", 0.85, 0.8)
-                .score("complexity", complexity, 1.8, 0.75));
+                .choice("intent", "complaint", 0.85, 0.8)
+                .score("complexity", 1.8, 0.75));
   }
 
   /** Entry point: the live API when {@code TYPESAFE_API_KEY} is set, otherwise the fake. */

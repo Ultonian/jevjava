@@ -18,7 +18,9 @@ import net.codefinch.jev.model.SystemOneRequest;
  *     a positive value sets it
  * @param headers extra request headers, merged case-insensitively over the client defaults; the
  *     SDK-controlled headers ({@code Authorization}, {@code Accept}, {@code Content-Type}, {@code
- *     User-Agent}, {@code X-TypeSafe-*}) always win
+ *     User-Agent}, {@code X-TypeSafe-SDK}, {@code X-TypeSafe-Runtime}, and {@code
+ *     X-TypeSafe-Retry-Count}) always win; other headers, including other {@code X-TypeSafe-*}
+ *     names, remain caller-controlled
  * @param retry a partial override of the client's retry policy for this call, applied to the
  *     client's policy (e.g. {@code p -> p.withMaxRetries(0)}); replace it wholesale with {@code p
  *     -> other}
@@ -49,18 +51,6 @@ public record RequestOptions(
   /** Starts building options. */
   public static Builder builder() {
     return new Builder();
-  }
-
-  /** The client's policy with this call's override applied, if any. */
-  public RetryPolicy resolveRetry(RetryPolicy clientPolicy) {
-    return retry
-        .map(r -> Objects.requireNonNull(r.apply(clientPolicy), "retry override"))
-        .orElse(clientPolicy);
-  }
-
-  /** Whether this call disables the operation deadline ({@code deadline == ZERO}). */
-  public boolean deadlineDisabled() {
-    return deadline.map(Duration::isZero).orElse(false);
   }
 
   private static void requireNonNegative(Duration d, String name) {

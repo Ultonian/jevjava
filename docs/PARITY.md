@@ -120,8 +120,13 @@ is not. Metrics observers run asynchronously; they may be delivered after a call
 | Reference | Version / snapshot |
 |---|---|
 | Official JavaScript SDK | `@typesafe-ai/sdk` 0.6.0, commit `66880ccded6cb642dc1809620c2b108c33730214` |
-| Official Python SDK | `typesafe-sdk` 0.7.1, commit `0ffd094c72ed9445223060b24ffd7a56aa781fb4` |
+| Official Python SDK contract baseline | `typesafe-sdk` 0.7.1, commit `0ffd094c72ed9445223060b24ffd7a56aa781fb4` |
 | OpenAPI | [`info.version` 0.2.0, retrieved 20 September 2026](upstream/openapi-0.2.0-2026-09-20.json) |
+
+Python `typesafe-sdk` 0.7.2 (26 September 2026) was checked against the pinned 0.7.1 commit:
+[the upstream diff](https://github.com/typesafe-ai/typesafe-sdk-python/compare/0ffd094c72ed9445223060b24ffd7a56aa781fb4...f078f1e208a0d885154dc758344ae4fce77ac168)
+adds an optional `http2` packaging extra and documentation, with no SDK source changes. The
+changelog tracks 0.7.2; the behavioural contract baseline above remains 0.7.1.
 
 These references document the contract used to implement this SDK. They are historical snapshots;
 this documentation cleanup does not constitute a new audit of upstream releases or a live API run.

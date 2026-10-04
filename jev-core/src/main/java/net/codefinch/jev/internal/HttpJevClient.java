@@ -74,24 +74,24 @@ public final class HttpJevClient implements JevClient {
   }
 
   /** The resolved configuration (credentials redacted in its string form). */
-  public ClientConfig config() {
+  ClientConfig config() {
     return config;
   }
 
   /** Number of calls retained for tracking, including pending delivery callbacks. */
-  public int trackedCalls() {
+  int trackedCalls() {
     return inFlight.size();
   }
 
   /** True once {@link #close()} has been called (admission closed), even if shutdown is ongoing. */
-  public boolean isClosed() {
+  boolean isClosed() {
     synchronized (lifecycle) {
       return phase != Phase.OPEN;
     }
   }
 
   /** True once the first closer's shutdown has completed, whether or not it succeeded. */
-  public boolean isShutdownComplete() {
+  boolean isShutdownComplete() {
     synchronized (lifecycle) {
       return phase == Phase.CLOSED;
     }

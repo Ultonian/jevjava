@@ -3,7 +3,6 @@ package net.codefinch.jev.model;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
 import com.fasterxml.jackson.databind.node.NullNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.POJONode;
@@ -64,8 +63,8 @@ public sealed interface Content
     Objects.requireNonNull(node, "node");
     return switch (node.getNodeType()) {
       case STRING -> new Text(node.textValue());
-      case OBJECT -> new JsonObject(Pure.copy(node));
-      case ARRAY -> new JsonArray(Pure.copy(node));
+      case OBJECT -> new JsonObject(copy(node));
+      case ARRAY -> new JsonArray(copy(node));
       case NULL -> NULL;
       default ->
           throw new IllegalArgumentException(
@@ -187,43 +186,30 @@ public sealed interface Content
    * Builds trees containing only immutable scalar nodes and fresh containers, so a {@code
    * deepCopy()} of the result is fully independent of anything the caller holds.
    */
-  final class Pure {
-    private Pure() {}
-
-    static JsonNode copy(JsonNode node) {
-      return switch (node.getNodeType()) {
-        case OBJECT -> {
-          ObjectNode out = JsonNodeFactory.instance.objectNode();
-          node.properties().forEach(e -> out.set(e.getKey(), copy(e.getValue())));
-          yield out;
-        }
-        case ARRAY -> {
-          ArrayNode out = JsonNodeFactory.instance.arrayNode(node.size());
-          node.forEach(child -> out.add(copy(child)));
-          yield out;
-        }
-        case STRING, NUMBER, BOOLEAN, NULL -> node; // immutable value nodes
-        case BINARY -> TextNode.valueOf(Base64.getEncoder().encodeToString(binary(node)));
-        case POJO -> copy(Json.toTree(((POJONode) node).getPojo()));
-        case MISSING ->
-            throw new IllegalArgumentException("Content must not contain a missing node");
-      };
-    }
-
-    private static byte[] binary(JsonNode node) {
-      try {
-        return node.binaryValue();
-      } catch (IOException e) {
-        throw new IllegalArgumentException("unreadable binary node", e);
+  private static JsonNode copy(JsonNode node) {
+    return switch (node.getNodeType()) {
+      case OBJECT -> {
+        ObjectNode out = JsonNodeFactory.instance.objectNode();
+        node.properties().forEach(e -> out.set(e.getKey(), copy(e.getValue())));
+        yield out;
       }
-    }
+      case ARRAY -> {
+        ArrayNode out = JsonNodeFactory.instance.arrayNode(node.size());
+        node.forEach(child -> out.add(copy(child)));
+        yield out;
+      }
+      case STRING, NUMBER, BOOLEAN, NULL -> node; // immutable value nodes
+      case BINARY -> TextNode.valueOf(Base64.getEncoder().encodeToString(binary(node)));
+      case POJO -> copy(Json.toTree(((POJONode) node).getPojo()));
+      case MISSING -> throw new IllegalArgumentException("Content must not contain a missing node");
+    };
   }
 
-  /** Whether a node type is representable as content at the top level. */
-  static boolean isContentType(JsonNodeType type) {
-    return type == JsonNodeType.STRING
-        || type == JsonNodeType.OBJECT
-        || type == JsonNodeType.ARRAY
-        || type == JsonNodeType.NULL;
+  private static byte[] binary(JsonNode node) {
+    try {
+      return node.binaryValue();
+    } catch (IOException e) {
+      throw new IllegalArgumentException("unreadable binary node", e);
+    }
   }
 }

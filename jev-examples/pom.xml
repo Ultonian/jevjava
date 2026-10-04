@@ -18,6 +18,12 @@
 
   <dependencies>
     <dependency>
+      <groupId>com.fasterxml.jackson.core</groupId>
+      <artifactId>jackson-databind</artifactId>
+      <!-- Used directly by tests and needed by the SDK when running the offline examples. -->
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
       <groupId>net.codefinch.jev</groupId>
       <artifactId>jev-core</artifactId>
       <version>${project.version}</version>
@@ -42,6 +48,18 @@
 
   <build>
     <plugins>
+      <plugin>
+        <!-- Keep reactor Javadoc links consistent with the libraries' automatic module names. -->
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-jar-plugin</artifactId>
+        <configuration>
+          <archive>
+            <manifestEntries>
+              <Automatic-Module-Name>net.codefinch.jev.examples</Automatic-Module-Name>
+            </manifestEntries>
+          </archive>
+        </configuration>
+      </plugin>
       <plugin>
         <!-- ./mvnw -q -pl jev-examples exec:java -->
         <groupId>org.codehaus.mojo</groupId>

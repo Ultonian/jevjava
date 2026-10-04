@@ -124,24 +124,22 @@ public final class TicketTriage {
 
   /** A fake with answers shaped like the real ones, so the example runs without a key. */
   static RecordingJevClient scripted() {
-    var dept = (net.codefinch.jev.model.ChoiceQuestion) QUESTIONS.asMap().get("department");
-    var sev = (net.codefinch.jev.model.ScoreQuestion) QUESTIONS.asMap().get("severity");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
                 .noul("refund_requested", 0.96)
-                .choice("department", dept, "billing", 0.9, 0.88)
-                .score("severity", sev, 1.9, 0.7))
+                .choice("department", "billing", 0.9, 0.88)
+                .score("severity", 1.9, 0.7))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
                 .noul("refund_requested", 0.3)
-                .choice("department", dept, "shipping", 0.7, 0.62)
-                .score("severity", sev, 2.0, 0.9))
+                .choice("department", "shipping", 0.7, 0.62)
+                .score("severity", 2.0, 0.9))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
                 .noul("refund_requested", 0.02)
-                .choice("department", dept, "other", 0.4, 0.3)
-                .score("severity", sev, 0.1, 0.95));
+                .choice("department", "other", 0.4, 0.3)
+                .score("severity", 0.1, 0.95));
   }
 
   private static String quote(String s) {

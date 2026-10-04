@@ -42,7 +42,7 @@ class JevMetricsIntegrationTest {
         });
     server.start();
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    JevMetrics metrics = JevMetrics.builder(registry).questionTags(Set.of("q")).build();
+    JevMetrics metrics = JevMetrics.builder(registry).allowQuestions(Set.of("q")).build();
     try (JevClient client =
         JevClient.builder()
             .apiKey("k")

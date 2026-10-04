@@ -3,7 +3,9 @@
 All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenAPI `info.version` 0.2.0.
+Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.2, OpenAPI `info.version` 0.2.0.
+Python 0.7.2 adds the optional `http2` packaging extra and documentation; the audited behavioural
+baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references).
 
 ## [Unreleased]
 
@@ -15,6 +17,15 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   CI pins Trivy 0.75.0.
 
 ### Changed
+- Remove public access to the internal HTTP client's resolved configuration and lifecycle test
+  hooks. Content copying and per-call policy resolution are now private/internal implementation
+  details: `Content.Pure`, `Content.isContentType`, `RequestOptions.resolveRetry` and
+  `RequestOptions.deadlineDisabled` are no longer public. Snapshot callers using these helpers
+  must update their code and recompile.
+- Rename `JevMetrics.Builder.questionTags(...)` to `allowQuestions(...)` and its read-only getter
+  to `allowedQuestions()`. Snapshot consumers must update these calls and recompile.
+- Clarify that the SDK protects its three specific `X-TypeSafe-*` request headers; other names
+  remain caller-controlled.
 - Move the 20 request/response data types to `net.codefinch.jev.model`, keeping each sealed
   hierarchy together. The root package now contains only the five client/configuration entry
   points. Update model imports and recompile; Maven coordinates and behavior are unchanged.
@@ -34,6 +45,11 @@ Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.1, OpenA
   Spotless 3.10.3 still requires.
 
 ### Added
+- `ScriptedAnswers.neutral(questions)` retains question context for `choice(id, label, probability,
+  confidence)` and `score(id, score, confidence)` overrides without casts. Explicit-question and
+  raw-answer overloads remain available, including for deliberately malformed fixtures.
+- Stable automatic-module names: `net.codefinch.jev`, `net.codefinch.jev.test` and
+  `net.codefinch.jev.micrometer`. These reserve names without claiming JPMS encapsulation.
 - [`jev-benchmarks`](jev-benchmarks/README.md): an unpublished, manually run benchmark module
   for component timing/allocation, local HTTP workloads and synthetic in-memory transport.
 - Reproducible fixtures, recorded runtime/source identities, raw results and summaries, plus

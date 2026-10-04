@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 import net.codefinch.jev.exception.JevException;
 import net.codefinch.jev.internal.ClientConfig;
+import net.codefinch.jev.internal.ClientTestAccess;
 import net.codefinch.jev.internal.HttpJevClient;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -22,7 +23,7 @@ class JevClientBuilderTest {
       Map<String, String> env, java.util.function.UnaryOperator<JevClientBuilder> more) {
     JevClientBuilder b = JevClient.builder().env(env::get);
     try (HttpJevClient c = (HttpJevClient) more.apply(b).build()) {
-      return c.config();
+      return ClientTestAccess.config(c);
     }
   }
 

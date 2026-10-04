@@ -16,12 +16,17 @@ implementation classes remain in `.internal` with their existing visibility.
 |---|---|
 | `HttpJevClient` | Endpoint specifications, admission, outstanding-call registry, OPEN/CLOSING/CLOSED phase, deadline scheduler lifetime, and resource shutdown |
 | `CallExecution<T>` | One operation's retry/deadline policy, attempt/terminal ordering, cancellation handle, public result, observer queue, and publication |
+| `CallOptions` | Resolve per-call retry and deadline overrides before admission |
 | `HttpExchange` | Request construction, protected headers, one HTTP exchange including its body, and transport failure mapping |
 | `CallSpec<T>` | Immutable endpoint, method, body and parser |
 | `Diagnostics` | Per-client filtering and delivery to the existing logger |
 | `RecordingJevClient` | Script selection, recording, atomic admission, and independently published results |
 
 New helpers are package-private. Existing public internal classes retain their visibility: `JevClientBuilder` imports `ClientConfig`, `HttpJevClient`, and `Sleeper` across a Java package boundary; `jev-test` uses `Json`, and its tests also use `ResponseParser`. No production dependency runs from core back to test support.
+
+The HTTP client's configuration and lifecycle inspection methods are package-private. Core tests
+reach them through `ClientTestAccess` in test sources only; this bridge is absent from the library
+JAR. Automatic-module names reserve stable identities but do not encapsulate internal packages.
 
 ## Thread and lock rules
 

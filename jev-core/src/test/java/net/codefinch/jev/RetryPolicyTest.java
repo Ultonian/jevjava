@@ -153,18 +153,4 @@ class RetryPolicyTest {
     assertThatThrownBy(() -> RetryPolicy.DEFAULT.httpStatuses().add(1))
         .isInstanceOf(UnsupportedOperationException.class);
   }
-
-  @Test
-  void requestOptionsApplyPartialOverrides() {
-    RetryPolicy client = RetryPolicy.DEFAULT.withMaxRetries(5);
-    RequestOptions partial = RequestOptions.builder().retry(p -> p.withBackoffJitter(0)).build();
-    RetryPolicy resolved = partial.resolveRetry(client);
-    assertThat(resolved.maxRetries()).isEqualTo(5);
-    assertThat(resolved.backoffJitter()).isZero();
-    assertThat(RequestOptions.NONE.resolveRetry(client)).isSameAs(client);
-    assertThat(RequestOptions.builder().retry(p -> RetryPolicy.NONE).build().resolveRetry(client))
-        .isSameAs(RetryPolicy.NONE);
-    assertThatThrownBy(() -> RequestOptions.builder().retry(p -> null).build().resolveRetry(client))
-        .isInstanceOf(NullPointerException.class);
-  }
 }

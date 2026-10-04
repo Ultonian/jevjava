@@ -5,7 +5,6 @@ import java.util.List;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.ChoiceAnswer;
 import net.codefinch.jev.model.ChoiceCriteria;
-import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.Questions;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.ConfidenceGate;
@@ -72,18 +71,11 @@ public final class VoiceBanking {
   }
 
   static RecordingJevClient scripted() {
-    ChoiceQuestion intent = (ChoiceQuestion) QUESTIONS.asMap().get("intent");
     return new RecordingJevClient()
-        .enqueue(
-            ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "check_balance", 0.96, 0.95))
-        .enqueue(
-            ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "approve_transfer", 0.93, 0.9))
-        .enqueue(
-            ScriptedAnswers.neutral(QUESTIONS)
-                .choice("intent", intent, "approve_transfer", 0.7, 0.72))
-        .enqueue(ScriptedAnswers.neutral(QUESTIONS).choice("intent", intent, "other", 0.9, 0.88));
+        .enqueue(ScriptedAnswers.neutral(QUESTIONS).choice("intent", "check_balance", 0.96, 0.95))
+        .enqueue(ScriptedAnswers.neutral(QUESTIONS).choice("intent", "approve_transfer", 0.93, 0.9))
+        .enqueue(ScriptedAnswers.neutral(QUESTIONS).choice("intent", "approve_transfer", 0.7, 0.72))
+        .enqueue(ScriptedAnswers.neutral(QUESTIONS).choice("intent", "other", 0.9, 0.88));
   }
 
   /** Entry point: the live API when {@code TYPESAFE_API_KEY} is set, otherwise the fake. */

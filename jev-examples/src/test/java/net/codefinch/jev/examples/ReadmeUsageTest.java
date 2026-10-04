@@ -16,7 +16,6 @@ import net.codefinch.jev.exception.JevRateLimitException;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.ChoiceAnswer;
 import net.codefinch.jev.model.ChoiceCriteria;
-import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.NoulAnswer;
 import net.codefinch.jev.model.NoulCriteria;
 import net.codefinch.jev.model.Questions;
@@ -127,7 +126,7 @@ class ReadmeUsageTest {
           .contains("jev-preview");
       assertThat(client.lastCall().orElseThrow().options().headers())
           .containsEntry("x-request-source", "batch-job");
-      assertThat(options.resolveRetry(RetryPolicy.DEFAULT).maxRetries()).isZero();
+      assertThat(options.retry().orElseThrow().apply(RetryPolicy.DEFAULT).maxRetries()).isZero();
     }
   }
 
@@ -199,15 +198,12 @@ class ReadmeUsageTest {
   }
 
   private static RecordingJevClient scripted(Questions questions) {
-    ChoiceQuestion dept = (ChoiceQuestion) questions.asMap().get("department");
-    net.codefinch.jev.model.ScoreQuestion sev =
-        (net.codefinch.jev.model.ScoreQuestion) questions.asMap().get("severity");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(questions)
                 .noul("refund_requested", 0.95)
-                .choice("department", dept, "billing", 0.85, 0.9)
-                .score("severity", sev, 1.4, 0.7)
+                .choice("department", "billing", 0.85, 0.9)
+                .score("severity", 1.4, 0.7)
                 .model("jev-1.13.0")
                 .usage(210, 31)
                 .headers(Map.of("x-typesafe-request-id", List.of("req-readme"))));

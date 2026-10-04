@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import net.codefinch.jev.exception.JevInterruptedException;
+import net.codefinch.jev.internal.ClientTestAccess;
 import net.codefinch.jev.internal.HttpJevClient;
 import net.codefinch.jev.internal.Sleeper;
 import net.codefinch.jev.model.ModelList;
@@ -185,13 +186,13 @@ class HttpCancellationTest {
     }
     futures.forEach(f -> f.cancel(true));
     futures.forEach(f -> assertThat(f.isCancelled()).isTrue());
-    assertThat(c.trackedCalls()).as("after 100 cancellations").isZero();
+    assertThat(ClientTestAccess.trackedCalls(c)).as("after 100 cancellations").isZero();
     futures.get(0).cancel(true); // repeated cancellation is harmless
     occupied.countDown();
     drain(single);
-    assertThat(c.trackedCalls()).as("after the worker drained").isZero();
+    assertThat(ClientTestAccess.trackedCalls(c)).as("after the worker drained").isZero();
     c.close();
-    assertThat(c.trackedCalls()).as("after close").isZero();
+    assertThat(ClientTestAccess.trackedCalls(c)).as("after close").isZero();
     assertThat(server.requests()).isEmpty();
     single.shutdownNow();
 
@@ -202,7 +203,7 @@ class HttpCancellationTest {
       CompletableFuture<SystemOneResponse> f = c2.systemOneAsync(REQUEST);
       awaitRequests(1);
       f.cancel(true);
-      assertThat(c2.trackedCalls()).as("during HTTP").isZero();
+      assertThat(ClientTestAccess.trackedCalls(c2)).as("during HTTP").isZero();
     }
 
     // (c) during backoff, with a blocking cancellation callback, cancelled from another thread.
@@ -233,7 +234,7 @@ class HttpCancellationTest {
       assertThat(f.isCancelled()).isTrue();
       callbackRelease.countDown();
       canceller.join(3000);
-      assertThat(c3.trackedCalls())
+      assertThat(ClientTestAccess.trackedCalls(c3))
           .as("during backoff, after the cancel callback returned")
           .isZero();
     } finally {
@@ -264,10 +265,10 @@ class HttpCancellationTest {
     // Entries that close() won are released by their delivery thread right after publication (and
     // after any callbacks), so the set drains a few microseconds after close() returns.
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-    while (c4.trackedCalls() != 0 && System.nanoTime() < end) {
+    while (ClientTestAccess.trackedCalls(c4) != 0 && System.nanoTime() < end) {
       Thread.sleep(1);
     }
-    assertThat(c4.trackedCalls()).as("after cancel/close race").isZero();
+    assertThat(ClientTestAccess.trackedCalls(c4)).as("after cancel/close race").isZero();
     occupied2.countDown();
     single2.shutdownNow();
   }

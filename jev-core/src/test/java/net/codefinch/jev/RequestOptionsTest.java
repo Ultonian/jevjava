@@ -46,15 +46,12 @@ class RequestOptionsTest {
   @Test
   void deadlineHasThreeStatesInheritDisabledAndSet() {
     assertThat(RequestOptions.NONE.deadline()).isEmpty();
-    assertThat(RequestOptions.NONE.deadlineDisabled()).isFalse();
     RequestOptions disabled = RequestOptions.builder().noDeadline().build();
     assertThat(disabled.deadline()).contains(Duration.ZERO);
-    assertThat(disabled.deadlineDisabled()).isTrue();
-    assertThat(RequestOptions.builder().deadline(Duration.ZERO).build().deadlineDisabled())
-        .isTrue();
+    assertThat(RequestOptions.builder().deadline(Duration.ZERO).build().deadline())
+        .contains(Duration.ZERO);
     RequestOptions set = RequestOptions.builder().deadline(Duration.ofSeconds(5)).build();
     assertThat(set.deadline()).contains(Duration.ofSeconds(5));
-    assertThat(set.deadlineDisabled()).isFalse();
     // Per-attempt timeouts stay strictly positive: zero is not a valid "disabled" there.
     assertThatThrownBy(() -> RequestOptions.builder().timeout(Duration.ZERO).build())
         .hasMessageContaining("timeout must be positive");

@@ -132,7 +132,7 @@ class JevMetricsTest {
   void questionTagsAreRecordedOnlyForAllowlistedIds() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     JevMetrics metrics =
-        JevMetrics.builder(registry).questionTags(Set.of("dept", "sev", "spam")).build();
+        JevMetrics.builder(registry).allowQuestions(Set.of("dept", "sev", "spam")).build();
     Map<String, Answer> answers = new LinkedHashMap<>();
     answers.put("dept", new ChoiceAnswer("a", Map.of("a", 1.0), 0.6));
     answers.put(
@@ -159,8 +159,8 @@ class JevMetricsTest {
     assertThat(registry.get("jev.noul").tags("question", "spam", "type", "noul").summary().mean())
         .isEqualTo(0.93);
     assertThat(registry.find("jev.noul").tag("question", "secret_id").meters()).isEmpty();
-    assertThat(metrics.questionTags()).containsExactlyInAnyOrder("dept", "sev", "spam");
-    assertThatThrownBy(() -> metrics.questionTags().add("x"))
+    assertThat(metrics.allowedQuestions()).containsExactlyInAnyOrder("dept", "sev", "spam");
+    assertThatThrownBy(() -> metrics.allowedQuestions().add("x"))
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
@@ -171,7 +171,7 @@ class JevMetricsTest {
   @Test
   void thousandDistinctQuestionIdsCreateNoSeriesWithoutAllowlist() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    JevMetrics metrics = JevMetrics.builder(registry).questionTags(Set.of("allowed")).build();
+    JevMetrics metrics = JevMetrics.builder(registry).allowQuestions(Set.of("allowed")).build();
     for (int i = 0; i < 1000; i++) {
       Map<String, Answer> answers = new LinkedHashMap<>();
       answers.put("question_" + i, new NoulAnswer(0.5));

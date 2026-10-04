@@ -246,7 +246,7 @@ public final class ResponseParser {
           .forEach(
               e -> {
                 String p = path + ".legend." + e.getKey();
-                if (e.getValue().isNull() || !Content.isContentType(e.getValue().getNodeType())) {
+                if (e.getValue().isNull() || !isContent(e.getValue())) {
                   throw invalid(p);
                 }
                 out.put(level(e.getKey(), p), Content.fromJson(e.getValue()));
@@ -265,5 +265,12 @@ public final class ResponseParser {
         throw invalid(path);
       }
     }
+  }
+
+  private static boolean isContent(JsonNode node) {
+    return switch (node.getNodeType()) {
+      case STRING, OBJECT, ARRAY, NULL -> true;
+      default -> false;
+    };
   }
 }

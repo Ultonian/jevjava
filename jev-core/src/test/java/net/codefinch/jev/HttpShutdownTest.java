@@ -22,6 +22,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import net.codefinch.jev.exception.JevException;
+import net.codefinch.jev.internal.ClientTestAccess;
 import net.codefinch.jev.internal.HttpJevClient;
 import net.codefinch.jev.model.ModelList;
 import net.codefinch.jev.model.SystemOneResponse;
@@ -85,8 +86,8 @@ class HttpShutdownTest {
     HttpJevClient c = (HttpJevClient) client().build();
     c.systemOne(REQUEST);
     c.close();
-    assertThat(c.config().executor().isShutdown()).isTrue();
-    assertThat(c.config().httpClient().isTerminated()).isTrue();
+    assertThat(ClientTestAccess.config(c).executor().isShutdown()).isTrue();
+    assertThat(ClientTestAccess.config(c).httpClient().isTerminated()).isTrue();
   }
 
   /** Review P1: close() must complete queued futures even if their worker never runs. */
@@ -210,7 +211,7 @@ class HttpShutdownTest {
       assertThat(elapsed).isBetween(Duration.ofMillis(150), Duration.ofSeconds(2));
       assertThat(queued.isDone()).as("the guarantee was not met, and close said so").isFalse();
       // shutdownNow() was issued with a zero grace budget; termination itself is asynchronous.
-      assertThat(c.config().httpClient().awaitTermination(Duration.ofSeconds(2)))
+      assertThat(ClientTestAccess.config(c).httpClient().awaitTermination(Duration.ofSeconds(2)))
           .as("owned HttpClient shut down anyway")
           .isTrue();
       assertThat(single.isShutdown()).as("caller-owned executor untouched").isFalse();
@@ -297,16 +298,16 @@ class HttpShutdownTest {
     Thread first = new Thread(c::close, "first-closer");
     first.start();
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-    while (!c.isClosed() && System.nanoTime() < end) {
+    while (!ClientTestAccess.isClosed(c) && System.nanoTime() < end) {
       Thread.sleep(1); // admission closed: the first closer is now inside its grace wait
     }
-    assertThat(c.isClosed()).isTrue();
+    assertThat(ClientTestAccess.isClosed(c)).isTrue();
     assertThat(first.isAlive()).isTrue();
     Thread second =
         new Thread(
             () -> {
               c.close();
-              shutdownDoneWhenSecondReturned.set(c.isShutdownComplete());
+              shutdownDoneWhenSecondReturned.set(ClientTestAccess.isShutdownComplete(c));
               resultDoneWhenSecondReturned.set(queued.isDone());
             },
             "second-closer");
@@ -338,7 +339,7 @@ class HttpShutdownTest {
     c.close();
     c.close();
     assertThat(f.isDone()).isTrue();
-    assertThat(c.trackedCalls()).isZero();
+    assertThat(ClientTestAccess.trackedCalls(c)).isZero();
     assertThatThrownBy(c::models).isInstanceOf(IllegalStateException.class);
   }
 
@@ -361,7 +362,7 @@ class HttpShutdownTest {
     Thread first = new Thread(c::close, "first-closer");
     first.start();
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-    while (!c.isClosed() && System.nanoTime() < end) {
+    while (!ClientTestAccess.isClosed(c) && System.nanoTime() < end) {
       Thread.sleep(1);
     }
     AtomicReference<Throwable> thrown = new AtomicReference<>();
@@ -536,10 +537,10 @@ class HttpShutdownTest {
             "first-closer");
     first.start();
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(2);
-    while (!c.isClosed() && System.nanoTime() < end) {
+    while (!ClientTestAccess.isClosed(c) && System.nanoTime() < end) {
       Thread.sleep(1);
     }
-    assertThat(c.isClosed()).isTrue();
+    assertThat(ClientTestAccess.isClosed(c)).isTrue();
     return first;
   }
 

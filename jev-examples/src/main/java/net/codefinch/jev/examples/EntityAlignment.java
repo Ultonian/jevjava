@@ -7,7 +7,6 @@ import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.Questions;
 import net.codefinch.jev.model.ScoreAnswer;
-import net.codefinch.jev.model.ScoreQuestion;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.test.RecordingJevClient;
@@ -120,23 +119,22 @@ public final class EntityAlignment {
   }
 
   static RecordingJevClient scripted() {
-    ScoreQuestion link = (ScoreQuestion) QUESTIONS.asMap().get("link_state");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("link_state", link, 1.9, 0.85)
+                .score("link_state", 1.9, 0.85)
                 .noul("same_name", 0.9)
                 .noul("same_brewery", 0.95)
                 .noul("same_style", 0.9))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("link_state", link, 1.1, 0.75)
+                .score("link_state", 1.1, 0.75)
                 .noul("same_name", 0.4)
                 .noul("same_brewery", 0.97)
                 .noul("same_style", 0.9))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("link_state", link, 0.05, 0.97)
+                .score("link_state", 0.05, 0.97)
                 .noul("same_name", 0.01)
                 .noul("same_brewery", 0.02)
                 .noul("same_style", 0.03));

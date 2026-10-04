@@ -5,9 +5,7 @@ import java.util.List;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.ChoiceCriteria;
-import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.Questions;
-import net.codefinch.jev.model.ScoreQuestion;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.patterns.ConfidenceGate;
 import net.codefinch.jev.patterns.NoulThreshold;
@@ -126,26 +124,23 @@ public final class SupportTicketFanOut {
   }
 
   static RecordingJevClient scripted() {
-    ChoiceQuestion category = (ChoiceQuestion) QUESTIONS.asMap().get("category");
-    ScoreQuestion severity = (ScoreQuestion) QUESTIONS.asMap().get("bug_severity");
-    ScoreQuestion frustration = (ScoreQuestion) QUESTIONS.asMap().get("frustration");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("category", category, "billing", 0.55, 0.55)
+                .choice("category", "billing", 0.55, 0.55)
                 .noul("refund_requested", 0.9)
-                .score("frustration", frustration, 1.4, 0.7))
+                .score("frustration", 1.4, 0.7))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("category", category, "bug_report", 0.95, 0.93)
-                .score("bug_severity", severity, 1.9, 0.8)
+                .choice("category", "bug_report", 0.95, 0.93)
+                .score("bug_severity", 1.9, 0.8)
                 .noul("has_reproducible_steps", 0.97)
-                .score("frustration", frustration, 0.8, 0.8))
+                .score("frustration", 0.8, 0.8))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .choice("category", category, "feature_request", 0.9, 0.9)
+                .choice("category", "feature_request", 0.9, 0.9)
                 .noul("refund_requested", 0.01)
-                .score("frustration", frustration, 0.05, 0.95));
+                .score("frustration", 0.05, 0.95));
   }
 
   /** Entry point: the live API when {@code TYPESAFE_API_KEY} is set, otherwise the fake. */

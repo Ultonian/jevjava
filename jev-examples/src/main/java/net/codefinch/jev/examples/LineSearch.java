@@ -9,7 +9,6 @@ import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.ChoiceAnswer;
 import net.codefinch.jev.model.ChoiceCriteria;
-import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.NoulCriteria;
 import net.codefinch.jev.model.Questions;
 import net.codefinch.jev.model.State;
@@ -118,11 +117,7 @@ public final class LineSearch {
 
   private static net.codefinch.jev.model.SystemOneResponse hit(
       Questions q, String line, double p, double exists) {
-    ChoiceQuestion where = (ChoiceQuestion) q.asMap().get("where");
-    return ScriptedAnswers.neutral(q)
-        .choice("where", where, line, p, 0.8)
-        .noul("exists", exists)
-        .build();
+    return ScriptedAnswers.neutral(q).choice("where", line, p, 0.8).noul("exists", exists).build();
   }
 
   /** Entry point: the live API when {@code TYPESAFE_API_KEY} is set, otherwise the fake. */

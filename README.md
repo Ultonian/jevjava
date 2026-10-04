@@ -50,7 +50,12 @@ Snippets omit imports and application-specific callbacks such as `route` and `su
 `net.codefinch.jev.internal` contains implementation details and is not a supported application API.
 Earlier snapshots placed the model and exception types directly in `net.codefinch.jev`. Update
 those imports and rebuild dependent applications; this pre-release move changes binary names.
-Maven coordinates, class names and behavior are unchanged.
+Maven coordinates, class names and behavior are unchanged by the package moves. See the
+[changelog](CHANGELOG.md) for other snapshot API changes, including the metrics allowlist rename.
+
+The library JARs reserve automatic-module names `net.codefinch.jev`, `net.codefinch.jev.test`
+and `net.codefinch.jev.micrometer`. They can also be used on the classpath. Automatic modules
+export all packages; the internal package remains unsupported rather than being hidden by JPMS.
 
 ### Create a client
 
@@ -223,7 +228,7 @@ Add `net.codefinch.jev:jev-micrometer:0.1.0-SNAPSHOT` for metrics. Provide your 
 Micrometer `MeterRegistry` and an API key:
 
 ```java
-JevMetrics metrics = JevMetrics.builder(registry).questionTags(Set.of("department")).build();
+JevMetrics metrics = JevMetrics.builder(registry).allowQuestions(Set.of("department")).build();
 JevClient client = JevClient.builder().apiKey(apiKey).observer(metrics).build();
 ```
 
@@ -253,13 +258,17 @@ try (RecordingJevClient fake = new RecordingJevClient()
 `RecordingJevClient` and `ScriptedAnswers` are in `net.codefinch.jev.test`. The fake needs no API
 key or network access. Scripts are consumed in order; once exhausted, the default responder
 returns neutral answers. Use `enqueueFailure(...)` for error paths. It does not simulate HTTP
-retry/backoff behavior.
+retry/backoff behavior. After `ScriptedAnswers.neutral(questions)`, use
+`choice("department", "billing", 0.9, 0.8)` or `score("severity", 1.5, 0.8)` to override an answer
+using its original question definition. Scripts created with `empty()` need an explicit question
+or a raw answer. Numeric values are intentionally not range-validated, so tests can model
+malformed responses.
 
 ## Examples
 
 Eight runnable examples in [`jev-examples`](jev-examples/README.md), each mirroring a page of the
-TypeSafe docs (speculative fan-out, composite scoring, confidence-gated routing, intent routing,
-line search, re-ranking, entity alignment) with its questions and thresholds in one file. They
+TypeSafe docs (quickstart, speculative fan-out, composite scoring, confidence-gated routing,
+intent routing, line search, re-ranking, entity alignment) with its questions and thresholds in one file. They
 run against the live API with `TYPESAFE_API_KEY`, otherwise against a scripted fake.
 
 ```sh

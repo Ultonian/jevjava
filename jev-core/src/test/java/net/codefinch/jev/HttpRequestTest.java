@@ -107,6 +107,7 @@ class HttpRequestTest {
             .defaultHeader("authorization", "Bearer wrong")
             .defaultHeader("X-Shared", "client")
             .defaultHeader("x-typesafe-retry-count", "9")
+            .defaultHeader("X-TypeSafe-Custom", "client")
             .build()) {
       c.systemOne(
           REQUEST,
@@ -114,9 +115,16 @@ class HttpRequestTest {
               .header("CONTENT-TYPE", "text/plain")
               .header("x-shared", "request")
               .header("User-Agent", "spoof")
+              .header("x-TYPESAFE-sdk", "spoof-sdk")
+              .header("X-typesafe-RUNTIME", "spoof-runtime")
+              .header("X-TypeSafe-Retry-Count", "99")
+              .header("x-typesafe-custom", "request")
               .build());
     }
     TestServer.Recorded req = server.lastRequest();
+    assertThat(req.header("X-TypeSafe-SDK")).isEqualTo(req.header("User-Agent"));
+    assertThat(req.header("X-TypeSafe-Runtime")).startsWith("java/");
+    assertThat(req.header("X-TypeSafe-Custom")).isEqualTo("request");
     assertThat(req.header("Authorization")).isEqualTo("Bearer test-key");
     assertThat(req.header("Content-Type")).isEqualTo("application/json");
     assertThat(req.header("User-Agent")).startsWith("jevjavauosdk/");

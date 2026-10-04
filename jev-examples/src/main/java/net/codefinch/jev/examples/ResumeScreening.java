@@ -9,7 +9,6 @@ import java.util.concurrent.CompletableFuture;
 import net.codefinch.jev.JevClient;
 import net.codefinch.jev.model.Answers;
 import net.codefinch.jev.model.Questions;
-import net.codefinch.jev.model.ScoreQuestion;
 import net.codefinch.jev.model.State;
 import net.codefinch.jev.model.SystemOneResponse;
 import net.codefinch.jev.patterns.Composite;
@@ -142,29 +141,25 @@ public final class ResumeScreening {
   }
 
   static RecordingJevClient scripted() {
-    ScoreQuestion py = (ScoreQuestion) QUESTIONS.asMap().get("python_depth");
-    ScoreQuestion lead = (ScoreQuestion) QUESTIONS.asMap().get("team_leadership");
-    ScoreQuestion arch = (ScoreQuestion) QUESTIONS.asMap().get("system_design");
-    ScoreQuestion gen = (ScoreQuestion) QUESTIONS.asMap().get("generalist");
     return new RecordingJevClient()
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("python_depth", py, 4.0, 0.9)
-                .score("team_leadership", lead, 1.0, 0.8)
-                .score("system_design", arch, 3.6, 0.85)
-                .score("generalist", gen, 1.5, 0.6))
+                .score("python_depth", 4.0, 0.9)
+                .score("team_leadership", 1.0, 0.8)
+                .score("system_design", 3.6, 0.85)
+                .score("generalist", 1.5, 0.6))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("python_depth", py, 1.2, 0.7)
-                .score("team_leadership", lead, 4.0, 0.95)
-                .score("system_design", arch, 2.5, 0.7)
-                .score("generalist", gen, 2.8, 0.7))
+                .score("python_depth", 1.2, 0.7)
+                .score("team_leadership", 4.0, 0.95)
+                .score("system_design", 2.5, 0.7)
+                .score("generalist", 2.8, 0.7))
         .enqueue(
             ScriptedAnswers.neutral(QUESTIONS)
-                .score("python_depth", py, 2.4, 0.7)
-                .score("team_leadership", lead, 2.0, 0.7)
-                .score("system_design", arch, 1.8, 0.6)
-                .score("generalist", gen, 3.2, 0.8));
+                .score("python_depth", 2.4, 0.7)
+                .score("team_leadership", 2.0, 0.7)
+                .score("system_design", 1.8, 0.6)
+                .score("generalist", 3.2, 0.8));
   }
 
   /** Entry point: the live API when {@code TYPESAFE_API_KEY} is set, otherwise the fake. */

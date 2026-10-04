@@ -71,10 +71,9 @@ final class CallExecution<T> {
     this.spec = spec;
     this.options = options;
     this.future = asynchronous ? new CallFuture<>() : null;
-    this.retry = options.resolveRetry(config.retry());
+    this.retry = CallOptions.resolveRetry(options, config.retry());
     this.attemptTimeout = options.timeout().orElse(config.timeout());
-    this.deadline =
-        options.deadlineDisabled() ? Optional.empty() : options.deadline().or(config::deadline);
+    this.deadline = CallOptions.resolveDeadline(options, config.deadline());
     this.submittedAt = config.nanoTime().getAsLong();
     this.deadlineAt = deadline.map(d -> submittedAt + d.toNanos());
     if (future != null) {

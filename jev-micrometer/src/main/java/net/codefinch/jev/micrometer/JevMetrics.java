@@ -44,13 +44,13 @@ import net.codefinch.jev.model.SystemOneResponse;
 public final class JevMetrics implements CallObserver {
   private final MeterRegistry registry;
   private final String prefix;
-  private final Set<String> questionTags;
+  private final Set<String> allowedQuestions;
   private final Tags commonTags;
 
   private JevMetrics(Builder b) {
     this.registry = b.registry;
     this.prefix = b.prefix;
-    this.questionTags = Collections.unmodifiableSet(new HashSet<>(b.questionTags));
+    this.allowedQuestions = Collections.unmodifiableSet(new HashSet<>(b.allowedQuestions));
     this.commonTags = b.commonTags;
   }
 
@@ -64,9 +64,9 @@ public final class JevMetrics implements CallObserver {
     return builder(registry).build();
   }
 
-  /** The question ids for which confidence/probability summaries are recorded. */
-  public Set<String> questionTags() {
-    return questionTags;
+  /** An immutable snapshot of the ids whose confidence/probability summaries are recorded. */
+  public Set<String> allowedQuestions() {
+    return allowedQuestions;
   }
 
   @Override
@@ -100,11 +100,11 @@ public final class JevMetrics implements CallObserver {
   private void recordResponse(SystemOneResponse response, String model) {
     tokens("input", model).increment(response.usage().inputTokens());
     tokens("output", model).increment(response.usage().outputTokens());
-    if (questionTags.isEmpty()) {
+    if (allowedQuestions.isEmpty()) {
       return;
     }
     for (Map.Entry<String, Answer> e : response.answers().asMap().entrySet()) {
-      if (!questionTags.contains(e.getKey())) {
+      if (!allowedQuestions.contains(e.getKey())) {
         continue;
       }
       switch (e.getValue()) {
@@ -146,7 +146,7 @@ public final class JevMetrics implements CallObserver {
   public static final class Builder {
     private final MeterRegistry registry;
     private String prefix = "jev";
-    private final Set<String> questionTags = new HashSet<>();
+    private final Set<String> allowedQuestions = new HashSet<>();
     private Tags commonTags = Tags.empty();
 
     private Builder(MeterRegistry registry) {
@@ -167,9 +167,9 @@ public final class JevMetrics implements CallObserver {
      * Question ids whose answers get a per-question confidence/probability summary. Off by default;
      * only allowlist ids you control, since each adds a meter series.
      */
-    public Builder questionTags(Set<String> ids) {
+    public Builder allowQuestions(Set<String> ids) {
       Objects.requireNonNull(ids, "ids");
-      ids.forEach(id -> questionTags.add(Objects.requireNonNull(id, "id")));
+      ids.forEach(id -> allowedQuestions.add(Objects.requireNonNull(id, "id")));
       return this;
     }
 

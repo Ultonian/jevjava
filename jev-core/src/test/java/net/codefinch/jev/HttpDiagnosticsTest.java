@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import net.codefinch.jev.internal.ClientTestAccess;
 import net.codefinch.jev.internal.HttpJevClient;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -123,7 +124,7 @@ class HttpDiagnosticsTest {
                 .defaultHeader("X-Trace", "visible")
                 .defaultModel("jev-1.13.0")
                 .build()) {
-      String s = c.config().toString();
+      String s = ClientTestAccess.config(c).toString();
       assertThat(s).doesNotContain("test-key", "hdr-secret");
       assertThat(s)
           .contains(
@@ -134,7 +135,7 @@ class HttpDiagnosticsTest {
               "deadline=PT30S");
     }
     try (HttpJevClient c = (HttpJevClient) client().noDeadline().build()) {
-      assertThat(c.config().toString()).contains("deadline=disabled");
+      assertThat(ClientTestAccess.config(c).toString()).contains("deadline=disabled");
     }
   }
 
