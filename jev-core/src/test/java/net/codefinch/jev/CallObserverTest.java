@@ -155,6 +155,8 @@ class CallObserverTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void deadlineAndCancellationOutcomesForQueuedAsyncCalls() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch block = new CountDownLatch(1);

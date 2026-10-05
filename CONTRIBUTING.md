@@ -1,7 +1,8 @@
 # Contributing
 
 Use JDK 21 or 25, Git and the checked-in Maven wrapper. Java 21 is the compilation baseline;
-CI verifies Temurin 21 and 25. Newer GA and early-access runtimes are not required support targets.
+CI requires Temurin 21 and 25. Rolling latest-GA checks and weekly EA probes are advisory;
+their failures are reported without expanding the required support matrix.
 The normal gate uses local fixtures and needs no API key. Commands below use a POSIX shell.
 
 ## Setup and checks
@@ -18,9 +19,10 @@ pre-commit run --all-files
 ```
 
 `verify` compiles with warnings treated as errors, checks formatting and Checkstyle, runs the
-tests, requires at least 85% line coverage in core, validates Javadoc and runs SpotBugs. Fix Java
-formatting with `./mvnw spotless:apply`. Pre-commit also checks repository file hygiene, runs Ruff
-and the fast benchmark Python tests, and scans with Trivy. It does not run timed benchmarks.
+tests, requires at least 85% line coverage in core and 95% in test helpers/Micrometer, validates
+Javadoc and runs SpotBugs. Fix Java formatting with `./mvnw spotless:apply`. Pre-commit also checks
+file hygiene, Python tooling, workflows, local links and contract pins, and scans with Trivy.
+It does not run timed benchmarks.
 
 Trivy runs on every commit with the same [policy](trivy.yaml) as CI: HIGH/CRITICAL findings from
 vulnerability, misconfiguration and secret scanners fail the scan; vulnerability findings without
@@ -37,7 +39,11 @@ The first Trivy scan downloads its database; subsequent scans cache and refresh 
 uncached Maven metadata require network access. A missing scanner, failed download or scan error
 blocks the commit. CI runs Trivy after Maven builds, restores their dependency cache, and resolves
 the reactor with `./mvnw -DskipTests install` if that cache is unavailable. Its separate pre-commit
-job skips Maven and Trivy because those have dedicated jobs.
+job skips Maven and Trivy because those have dedicated checks. API comparison runs in the
+required JDK 21 CI job or manually; it does not repeat Maven verification in pre-commit.
+Error Prone runs separately on JDK 21. API compatibility permits no baseline only for the initial
+release. See the [quality-gate guide](.github/maintainers/QUALITY_GATES.md) for commands, policy,
+coverage floors, suppression rationale and scheduled monitoring.
 
 ## Tests and examples
 

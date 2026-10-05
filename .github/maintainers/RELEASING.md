@@ -24,8 +24,9 @@ pre-commit run --all-files
 ```
 
 See [CONTRIBUTING](../../CONTRIBUTING.md) for tool setup and live-test opt-in. These commands do
-not sign or publish artifacts. Release workflow commands must be documented and rehearsed when
-that automation is implemented.
+not sign or publish artifacts. The [quality-gate guide](QUALITY_GATES.md) documents API comparison,
+Error Prone, release dependency checks and the publication-only SBOM profile. Release workflow
+commands must be documented and rehearsed when that automation is implemented.
 
 ## Branches and versions
 
@@ -34,7 +35,7 @@ and its starting commit has passed CI; stabilize and qualify the release there.
 
 | Ref | Purpose | First-release example |
 |---|---|---|
-| `main` | Features and fixes for the next minor release | Move to `0.2.0-SNAPSHOT` after the cut |
+| `main` | Features and fixes for the next minor release | Move to `0.2.0-SNAPSHOT` once the first published baseline is available |
 | `release/0.1` | Stabilization, then maintenance of the 0.1 line | `0.1.0-SNAPSHOT`, then candidate `0.1.0`, then `0.1.1-SNAPSHOT` |
 | `v0.1.0` | Immutable, approved release commit | Created only after candidate qualification |
 
@@ -50,8 +51,11 @@ stable tags against replacement or deletion.
 
 ## Candidate to release
 
-1. **Cut:** create `release/0.1` from a green, recorded commit. Bump `main` to the next snapshot
-   in a separate commit so normal development can continue.
+1. **Cut:** create `release/0.1` from a green, recorded commit. Development continues on `main`.
+   For the first release, keep its snapshot version until `0.1.0` is published; then set the API
+   baseline and bump `main` together. Later cuts can advance `main` immediately because a published
+   compatibility baseline already exists. This avoids treating an unpublished candidate as a
+   resolvable Maven Central baseline.
 2. **Prepare:** on the release branch, set the final Maven version (`0.1.0`), finalize the
    changelog (date the release and add its tag/compare links), the README dependency version and SCM metadata, and set a fixed reproducible-build timestamp.
    Build from a clean committed checkout on a pinned JDK 21 distribution and patch version.
@@ -96,8 +100,8 @@ the normal release process. See [Central immutability](https://central.sonatype.
   Generate Javadoc from clean output and assert the JARs and their indexes contain no internal
   package pages; incremental generation can retain obsolete HTML despite package exclusions.
 - Review the public API, README examples, release notes and known limitations. From the second
-  release onward, compare API compatibility with the previous release; introduce an automated
-  compatibility check before it becomes a recurring manual task.
+  release onward, run `python3 -B scripts/api_compat.py` against the explicitly pinned previous
+  release. Update `config/quality/api-policy.json` when publication makes the new baseline available.
 - Run the existing opt-in live probes once before the first release using protected credentials
   and retain a sanitized result. This checks current service compatibility; performance tests
   remain local and need no API key. An unavailable service leaves that check explicitly pending.
@@ -155,8 +159,8 @@ release evidence durably rather than relying on their expiry window.
    `jev-examples` and `jev-benchmarks` from the Central bundle and assert its contents in a dry run;
    do not rely solely on their existing `maven.deploy.skip` flags. The parent POM must be published
    because consumers inherit it. See [artifact requirements](https://central.sonatype.org/publish/requirements/).
-3. **Candidate workflow:** add release-branch CI coverage (`release/**`; pushes currently cover
-   only `main`) and a manually dispatched candidate build. Use the publishing plugin's
+3. **Candidate workflow:** retain the existing `main` and `release/**` CI coverage and add a
+   manually dispatched candidate build. Use the publishing plugin's
    `skipPublishing` mode to create a bundle without uploading. Keep automatic publication disabled.
    See [plugin configuration](https://central.sonatype.org/publish/publish-portal-maven/).
 4. **Promotion workflow:** accept the stable tag and recorded candidate/deployment identity,

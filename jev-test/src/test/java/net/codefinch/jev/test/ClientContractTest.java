@@ -170,6 +170,8 @@ class ClientContractTest {
 
   @ParameterizedTest
   @EnumSource(Backend.class)
+  // The outer Future is awaited below; its inner future is separately checked for cancellation.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void admissionRacingCloseIsEitherRejectedOrPublished(Backend backend) throws Exception {
     for (int i = 0; i < 10; i++) {
       try (Fixture f = new Fixture(backend, false);
@@ -223,6 +225,8 @@ class ClientContractTest {
     private final HttpServer server;
     private final ExecutorService serverExecutor;
 
+    // This task only holds the operation queue until the test releases its latch.
+    @SuppressWarnings("FutureReturnValueIgnored")
     Fixture(Backend backend, boolean holdResponse) throws IOException {
       releaseResponse = new CountDownLatch(holdResponse ? 1 : 0);
       executor.submit(() -> await(queueGate));

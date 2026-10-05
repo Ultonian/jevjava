@@ -9,6 +9,7 @@ import net.codefinch.jev.model.ChoiceAnswer;
 import net.codefinch.jev.model.ChoiceQuestion;
 import net.codefinch.jev.model.Content;
 import net.codefinch.jev.model.Questions;
+import net.codefinch.jev.model.ScoreAnswer;
 import net.codefinch.jev.model.ScoreQuestion;
 import org.junit.jupiter.api.Test;
 
@@ -99,5 +100,14 @@ class ScriptedAnswersTest {
                 .score("severity")
                 .score())
         .isEqualTo(99.0);
+  }
+
+  @Test
+  void directAnswersRetainDeliberatelyMalformedFixtures() {
+    var choice = new ChoiceAnswer("unknown", Map.of("unknown", 2.0), -1.0);
+    var score = new ScoreAnswer(99.0, Map.of(0, Content.of("low")), Map.of(0, 2.0), -1.0);
+    var answers = ScriptedAnswers.empty().choice("choice", choice).score("score", score).answers();
+    assertThat(answers.choice("choice")).isSameAs(choice);
+    assertThat(answers.score("score")).isSameAs(score);
   }
 }

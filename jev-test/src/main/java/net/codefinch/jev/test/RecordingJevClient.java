@@ -256,6 +256,8 @@ public final class RecordingJevClient implements JevClient {
    * Records the call and registers its future atomically with the closed check, like the HTTP
    * client's admission: a call is either rejected or visible to {@link #close()}, never in between.
    */
+  // The original future is returned; this dependent stage only removes completed calls.
+  @SuppressWarnings("FutureReturnValueIgnored")
   private void admit(RecordedCall call, CompletableFuture<?> future) {
     synchronized (lifecycle) {
       if (closed) {

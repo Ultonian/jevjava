@@ -19,8 +19,12 @@ Initial release in preparation; not yet published to Maven Central.
   status, request id and response details.
 - Configurable retries, server-directed backoff, attempt timeouts, operation deadlines,
   cancellation and bounded shutdown. Caller-supplied transports and executors remain caller-owned.
+  Terminal-state and observer ordering are preserved through cancellation and concurrent shutdown;
+  blocked callbacks do not extend the shutdown guarantee.
+- Snapshots of nested Jackson content and validation of trailing JSON, required response fields
+  and numeric ranges.
 - Routing helpers: `NoulThreshold`, `ConfidenceGate`, normalized `Composite` scores and `FanOut`.
-  Applications choose their own thresholds.
+  Composite weighting supports extreme finite weights. Applications choose their own thresholds.
 - `jev-test`: a recording client and scripted answers for tests without credentials or network
   access. Question-aware `choice` and `score` overloads avoid casts; numeric fixtures may deliberately
   be malformed. The fake does not simulate HTTP retries, timeouts or deadlines.
@@ -30,6 +34,8 @@ Initial release in preparation; not yet published to Maven Central.
   HTTP, synthetic transport, component timing/allocation and restricted JFR diagnostics.
 - Automatic-module names `net.codefinch.jev`, `net.codefinch.jev.test` and
   `net.codefinch.jev.micrometer`; classpath use remains supported.
+- Coverage gates for all published libraries, focused Error Prone analysis, public API compatibility
+  checks and scheduled dependency/upstream/runtime monitoring.
 - Contributor instructions, private security reporting, issue forms and public API Javadoc.
   Internal implementation packages are excluded from generated API documentation.
 
@@ -53,16 +59,6 @@ Initial release in preparation; not yet published to Maven Central.
 - Remove public access to HTTP client configuration/lifecycle test hooks, `Content.Pure`,
   `Content.isContentType`, `RequestOptions.resolveRetry` and `RequestOptions.deadlineDisabled`.
   Use the public builder, model and per-call options APIs instead; `.internal` is unsupported.
-
-### Fixed
-
-- Preserve terminal-state and observer ordering through cancellation, deadlines, failed request
-  construction and concurrent shutdown. Blocked callbacks do not extend the shutdown guarantee.
-- Snapshot nested Jackson content; reject trailing JSON, malformed required response fields and
-  unrepresentable numeric values. Composite weighting handles extreme finite weights.
-- Respect confirmation outcomes in the examples and include exactly `0.8` in ticket triage's
-  refund priority boost. The combined examples print their source once.
-- Stop the benchmark child and finalize its manifest if shutdown-hook registration fails.
 
 ### Security
 

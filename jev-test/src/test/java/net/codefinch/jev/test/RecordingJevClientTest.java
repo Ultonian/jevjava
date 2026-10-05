@@ -138,6 +138,9 @@ class RecordingJevClientTest {
   void defaultAndReplacementModelsResponses() throws Exception {
     try (RecordingJevClient c = new RecordingJevClient()) {
       assertThat(c.models().models()).extracting(ModelMetadata::name).containsExactly("jev-latest");
+      assertThatThrownBy(() -> c.lastCall().orElseThrow().systemOneRequest())
+          .isInstanceOf(IllegalStateException.class)
+          .hasMessage("models call has no request");
       c.modelsResponse(List.of(new ModelMetadata("x", "d", "2026-02-02")));
       assertThat(c.modelsAsync().get(2, TimeUnit.SECONDS).models())
           .extracting(ModelMetadata::name)
@@ -297,6 +300,9 @@ class RecordingJevClientTest {
 
   /** completions are published off the closing thread and off the responder executor. */
   @Test
+  // Completion is observed through the original future; the dependent callback is held
+  // deliberately.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void closeDoesNotRunContinuationsOnTheClosingThreadNorWaitForThem() throws Exception {
     CapturingExecutor executor = new CapturingExecutor();
     RecordingJevClient c = new RecordingJevClient(Clock.systemUTC(), executor);

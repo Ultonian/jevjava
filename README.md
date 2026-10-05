@@ -20,9 +20,10 @@ runtime behavior and differences from the pinned official SDKs.
 
 ## Requirements and compatibility
 
-Java 21 is the minimum runtime and bytecode target. CI verifies Temurin JDK 21 and 25; newer GA
-and early-access JDKs are not part of the required support matrix. Core uses the Jackson 2.22
-runtime family; the Micrometer module adds Micrometer dependencies.
+Java 21 is the minimum runtime and bytecode target. CI requires Temurin JDK 21 and 25. Rolling
+latest-GA checks and weekly early-access probes are advisory; their failures are reported without
+expanding the required support matrix. Core uses the Jackson 2.22 runtime family; the Micrometer
+module adds Micrometer dependencies.
 
 The built-in JDK HTTP client prefers HTTP/2 and falls back to HTTP/1.1 according to the server,
 proxy and transport configuration; no extra HTTP/2 library is needed. An injected `HttpClient`

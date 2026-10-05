@@ -1,0 +1,45 @@
+name: Maintenance signals
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 6 * * 1"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maintenance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  monitor:
+    name: Check ${{ matrix.signal }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        signal: [upstream, tools, links]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+      - name: Inspect without changing pins or opening issues
+        env:
+          SIGNAL: ${{ matrix.signal }}
+        run: |
+          if [ "$SIGNAL" = links ]; then
+            python3 -B scripts/check_links.py --external
+          else
+            python3 -B scripts/monitor.py "$SIGNAL"
+          fi
+      - name: Retain fetched evidence and findings
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: maintenance-${{ matrix.signal }}
+          path: target/maintenance/
+          retention-days: 30
+          if-no-files-found: ignore

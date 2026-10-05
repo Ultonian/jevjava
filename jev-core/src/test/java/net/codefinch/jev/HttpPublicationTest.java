@@ -62,6 +62,8 @@ class HttpPublicationTest {
 
   /** The deadline must cover executor queueing and expire independently of it. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void queuedCallExpiresAtTheDeadlineWhileTheExecutorIsStillBlocked() throws Exception {
     server.enqueueJson(200, MODELS).enqueueJson(200, MODELS);
     ExecutorService single = Executors.newSingleThreadExecutor();
@@ -99,6 +101,8 @@ class HttpPublicationTest {
 
   /** A blocking application callback must not stall other calls' deadlines. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockingCallbackDoesNotBlockOtherDeadlines() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -132,6 +136,8 @@ class HttpPublicationTest {
 
   /** {@code close()} stays bounded even when a completion callback blocks. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void closeIsBoundedDespiteBlockingCallback() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -168,6 +174,8 @@ class HttpPublicationTest {
 
   /** Cancellation kills the exchange before callbacks, so no retry can slip out. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void cancelPreventsRetryWhileTheCancellationCallbackIsBlocked() throws Exception {
     server
         .enqueue(TestServer.Scripted.json(500, "{}").stallingHeaders(Duration.ofMillis(300)))

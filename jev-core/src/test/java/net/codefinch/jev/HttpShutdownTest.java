@@ -92,6 +92,8 @@ class HttpShutdownTest {
 
   /** {@code close()} must complete queued futures even if their worker never runs. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void closeCompletesQueuedFuturesBeforeTheirWorkerEverRuns() throws Exception {
     server.enqueueJson(200, MODELS);
     ExecutorService single = Executors.newSingleThreadExecutor();

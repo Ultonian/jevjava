@@ -84,6 +84,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnCallDoesNotStallOtherDeadlinesNorTheFailedResult() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -115,6 +117,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnCallDoesNotUnboundClose() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -152,6 +156,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnAttemptAndOnCallDoNotDelaySuccessOrCancellation() throws Exception {
     server.enqueueJson(200, OK).enqueueJson(200, OK);
     Blocking observer = new Blocking(true);
