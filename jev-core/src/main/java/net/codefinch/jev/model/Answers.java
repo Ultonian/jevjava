@@ -16,6 +16,8 @@ import net.codefinch.jev.exception.JevMissingAnswerException;
  * when the server returned an answer kind this SDK does not know) and {@link
  * JevAnswerTypeException} when the answer is of a different primitive; {@link #get(String)} does
  * neither.
+ *
+ * @since 0.1.0
  */
 public final class Answers {
   private final Map<String, Answer> byId;
@@ -39,17 +41,32 @@ public final class Answers {
     return Optional.ofNullable(byId.get(id));
   }
 
-  /** The noul answer for an id. */
+  /**
+   * The noul answer for an id.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a noul answer
+   */
   public NoulAnswer noul(String id) {
     return typed(id, NoulAnswer.class);
   }
 
-  /** The choice answer for an id. */
+  /**
+   * The choice answer for an id.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a choice answer
+   */
   public ChoiceAnswer choice(String id) {
     return typed(id, ChoiceAnswer.class);
   }
 
-  /** The score answer for an id. */
+  /**
+   * The score answer for an id.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a score answer
+   */
   public ScoreAnswer score(String id) {
     return typed(id, ScoreAnswer.class);
   }

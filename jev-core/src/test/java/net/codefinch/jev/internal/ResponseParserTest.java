@@ -167,7 +167,7 @@ class ResponseParserTest {
         .hasMessageContaining("'" + fieldPath + "'");
   }
 
-  /** Review P2: longValue()/doubleValue() silently wrapped or overflowed. */
+  /** Numeric conversion must not silently wrap or overflow. */
   @ParameterizedTest(name = "{1}")
   @CsvSource(
       delimiter = '|',
@@ -197,7 +197,7 @@ class ResponseParserTest {
     assertThat(r.answers().noul("n").noul()).isEqualTo(Double.MAX_VALUE);
   }
 
-  /** Review P2: the mapper read the first JSON value and ignored whatever followed. */
+  /** Response parsing rejects trailing content after the JSON document. */
   @ParameterizedTest
   @CsvSource(
       delimiter = '|',
@@ -213,7 +213,7 @@ class ResponseParserTest {
         .hasMessageContaining("'$'");
   }
 
-  /** Review P2: schema says answers has minProperties 1. */
+  /** The schema requires at least one entry in the answers object. */
   @Test
   void emptyWireAnswersAreRejectedButAllUnknownTypesYieldAnEmptyTypedMap() {
     String empty =

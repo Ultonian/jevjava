@@ -1,0 +1,27 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    groups:
+      build-and-test:
+        dependency-type: development
+      runtime:
+        dependency-type: production
+    ignore:
+      # Spotless 3.10.3 calls Style.valueOf, removed in formatter 1.37.
+      - dependency-name: com.google.googlejavaformat:google-java-format
+        versions: [">=1.37.0"]
+      # 3.7.0 logs plugin reproducibility errors but overwrites the failure flag.
+      - dependency-name: org.apache.maven.plugins:maven-artifact-plugin
+        versions: ["3.7.0"]
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 2
+    groups:
+      actions:
+        patterns: ["*"]

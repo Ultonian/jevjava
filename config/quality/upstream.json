@@ -1,0 +1,11 @@
+{
+  "schema": {
+    "url": "https://api.typesafe.ai/openapi.json",
+    "path": "docs/upstream/openapi-0.2.0-2026-09-20.json",
+    "version": "0.2.0",
+    "sha256": "a191f8a7df6bd6fedced8120dd0fd106f88575d1d1c8360d08900a6c7c0360d5"
+  },
+  "npm": {"url": "https://registry.npmjs.org/@typesafe-ai/sdk/latest", "version": "0.6.0"},
+  "pypi": {"url": "https://pypi.org/pypi/typesafe-sdk/json", "version": "0.7.2"},
+  "acknowledgements": []
+}

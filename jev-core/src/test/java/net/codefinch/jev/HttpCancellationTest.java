@@ -49,6 +49,8 @@ class HttpCancellationTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void cancelBeforeStartNeverSendsRequest() throws Exception {
     ExecutorService gate = Executors.newSingleThreadExecutor();
     CountDownLatch block = new CountDownLatch(1);
@@ -166,8 +168,10 @@ class HttpCancellationTest {
     }
   }
 
-  /** R4 P2(1): explicitly cancelled calls must not stay tracked, whatever state they were in. */
+  /** Explicitly cancelled calls must not stay tracked, whatever state they were in. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void explicitCancellationReleasesTrackingInEveryState() throws Exception {
     // (a) 100 cancellations before start on a blocked caller-owned executor (the reviewer's probe).
     CountDownLatch occupied = new CountDownLatch(1);

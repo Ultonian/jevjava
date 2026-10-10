@@ -7,6 +7,8 @@ import java.util.Map;
  * HTTP 403: permission denied. Note that a request with no API key at all has been observed to
  * return 403 (with {@code error_type: authentication_error}) rather than 401, so check the key
  * first. Mirrors upstream {@code TypeSafePermissionDeniedError}.
+ *
+ * @since 0.1.0
  */
 public class JevPermissionDeniedException extends JevApiException {
   private static final long serialVersionUID = 1L;

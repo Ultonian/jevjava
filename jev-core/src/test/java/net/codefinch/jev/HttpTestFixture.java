@@ -107,6 +107,8 @@ final class HttpTestFixture implements AutoCloseable {
     }
   }
 
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   static ExecutorService blockedCallerExecutor(CountDownLatch occupied) {
     ExecutorService single = Executors.newSingleThreadExecutor(r -> new Thread(r, "caller-exec"));
     single.submit(() -> occupied.await(10, TimeUnit.SECONDS));

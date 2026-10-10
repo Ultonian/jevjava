@@ -12,5 +12,9 @@ API. It is not affiliated with, endorsed by, or supported by TypeSafe AI.
 - [Inspect the pinned API schema](upstream/README.md): the reference contract used during implementation.
 
 The SDK is pre-release and must currently be installed from source. Java 21 is the minimum runtime;
-CI verifies Java 21 and 25. Maven coordinates remain `net.codefinch.jev:jev-core` despite the repository
+CI requires verification on Temurin JDK 21 and 25. Rolling latest-GA checks and weekly EA probes
+are advisory; their failures are reported without expanding the required support matrix. Maven coordinates remain `net.codefinch.jev:jev-core` despite the repository
 rename. Public imports and behavior may change before the first release.
+
+For development setup and live-test instructions, see [CONTRIBUTING](../CONTRIBUTING.md).
+Report suspected vulnerabilities privately through [SECURITY](../SECURITY.md).

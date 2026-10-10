@@ -21,11 +21,21 @@ repos:
     rev: v0.16.10
     hooks:
       - id: ruff-check
-        name: ruff (benchmark study scripts)
+        name: ruff (Python tooling)
         args: ["--config", "jev-benchmarks/scripts/ruff.toml"]
-        files: ^jev-benchmarks/scripts/.*\.py$
+        files: ^(jev-benchmarks/scripts|scripts)/.*\.py$
+  - repo: https://github.com/rhysd/actionlint
+    rev: v1.7.12
+    hooks:
+      - id: actionlint
   - repo: local
     hooks:
+      - id: repository-checks
+        name: repository links, contract pins and gate tests
+        entry: python -B scripts/check_repository.py
+        language: python
+        pass_filenames: false
+        files: (^scripts/|^config/quality/|\.md$|^pom\.xml$|^\.github/|^\.pre-commit-config\.yaml$)
       - id: trivy
         name: trivy (HIGH/CRITICAL vulnerabilities, config, secrets)
         entry: trivy fs --config trivy.yaml .

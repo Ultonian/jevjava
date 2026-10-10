@@ -34,6 +34,7 @@ import net.codefinch.jev.exception.JevTimeoutException;
  * @param retryConnectionErrors whether {@link JevConnectionException} (not timeouts) is retried
  * @param retryTimeouts whether {@link JevTimeoutException} is retried
  * @param predicate an extra rule consulted in addition to the built-in ones
+ * @since 0.1.0
  */
 public record RetryPolicy(
     int maxRetries,

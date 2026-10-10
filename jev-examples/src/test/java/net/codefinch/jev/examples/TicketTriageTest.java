@@ -12,7 +12,7 @@ import org.junit.jupiter.api.condition.DisabledIfEnvironmentVariable;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
-/** Plan §6 Phase 3 gate: the example runs against the recording fake in CI. */
+/** The example runs against the recording fake in CI. */
 class TicketTriageTest {
 
   @Test

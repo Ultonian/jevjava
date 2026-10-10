@@ -40,7 +40,7 @@ class HttpDiagnosticsTest {
     return fixture.client();
   }
 
-  /** Review P2: every diagnostic honours the client's level; secrets never appear. */
+  /** Every diagnostic honours the client's level; secrets never appear. */
   @Test
   void loggingHonoursTheClientLevelAndRedactsCredentials() {
     try (SdkLogCapture capture = new SdkLogCapture(HttpJevClient.class.getName())) {
@@ -96,7 +96,7 @@ class HttpDiagnosticsTest {
     }
   }
 
-  /** Review P3: diagnostics never render the key or credential-bearing default headers. */
+  /** diagnostics never render the key or credential-bearing default headers. */
   @Test
   void configToStringRedactsCredentials() {
     try (HttpJevClient c =
@@ -121,7 +121,7 @@ class HttpDiagnosticsTest {
     }
   }
 
-  /** Fix-review P2: DEBUG retry lines never carry server body text; TRACE may. */
+  /** DEBUG retry lines never carry server body text; TRACE may. */
   @Test
   void debugRetryLogsCarryNoBodyText() {
     try (SdkLogCapture capture = new SdkLogCapture(HttpJevClient.class.getName())) {

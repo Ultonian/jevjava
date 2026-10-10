@@ -90,8 +90,10 @@ class HttpShutdownTest {
     assertThat(ClientTestAccess.config(c).httpClient().isTerminated()).isTrue();
   }
 
-  /** Review P1: close() must complete queued futures even if their worker never runs. */
+  /** {@code close()} must complete queued futures even if their worker never runs. */
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void closeCompletesQueuedFuturesBeforeTheirWorkerEverRuns() throws Exception {
     server.enqueueJson(200, MODELS);
     ExecutorService single = Executors.newSingleThreadExecutor();
@@ -123,10 +125,7 @@ class HttpShutdownTest {
     assertThat(server.requests()).isEmpty();
   }
 
-  /**
-   * Fix-review P2: a call racing close() is either admitted (and cancelled) or rejected — never
-   * lost.
-   */
+  /** A call racing close() is either admitted (and cancelled) or rejected — never lost. */
   @ParameterizedTest(name = "async={0} deadline={1}")
   @CsvSource({"true, true", "true, false", "false, true", "false, false"})
   void callRacingCloseNeverEscapesShutdown(boolean async, boolean withDeadline) throws Exception {
@@ -185,7 +184,7 @@ class HttpShutdownTest {
     callerExecutor.shutdownNow();
   }
 
-  /** R4 P2(2): if publication cannot be established within its timeout, close() throws. */
+  /** If publication cannot be established within its timeout, close() throws. */
   @Test
   void publicationTimeoutMakesCloseThrowAfterShuttingDownOwnedResources() throws Exception {
     CountDownLatch occupied = new CountDownLatch(1);
@@ -230,9 +229,7 @@ class HttpShutdownTest {
     assertThat(queued.isDone()).isTrue();
   }
 
-  /**
-   * R4 P2(2): interrupting the closing thread during the publication wait throws and re-asserts.
-   */
+  /** Interrupting the closing thread during the publication wait throws and re-asserts. */
   @Test
   void interruptedPublicationWaitMakesCloseThrowAndReassertTheFlag() throws Exception {
     CountDownLatch occupied = new CountDownLatch(1);
@@ -277,7 +274,7 @@ class HttpShutdownTest {
     }
   }
 
-  /** R5: a concurrent close() returns only after the first closer's shutdown, with results done. */
+  /** A concurrent close() returns only after the first closer's shutdown, with results done. */
   @Test
   void concurrentCloseObservesTheFirstClosersOutcome() throws Exception {
     CountDownLatch occupied = new CountDownLatch(1);
@@ -328,7 +325,7 @@ class HttpShutdownTest {
     single.shutdownNow();
   }
 
-  /** R5: repeated close after a successful shutdown is a truthful no-op. */
+  /** Repeated close after a successful shutdown is a truthful no-op. */
   @Test
   void repeatedCloseAfterSuccessfulShutdownReturnsNormally() throws Exception {
     server.enqueueJson(200, MODELS);
@@ -343,9 +340,7 @@ class HttpShutdownTest {
     assertThatThrownBy(c::models).isInstanceOf(IllegalStateException.class);
   }
 
-  /**
-   * R5: a concurrent closer that is interrupted throws and re-asserts, without touching shutdown.
-   */
+  /** A concurrent closer that is interrupted throws and re-asserts, without touching shutdown. */
   @Test
   void interruptedConcurrentCloserThrowsAndReassertsTheFlag() throws Exception {
     CountDownLatch occupied = new CountDownLatch(1);
@@ -395,7 +390,7 @@ class HttpShutdownTest {
     single.shutdownNow();
   }
 
-  /** R6: overlapping closers, publication held past both — the second fails within ONE budget. */
+  /** Overlapping closers, publication held past both — the second fails within ONE budget. */
   @ParameterizedTest(name = "grace={0}ms")
   @CsvSource({"0", "50"})
   void concurrentCloserSpendsAtMostOneGracePlusPublicationBudget(long graceMillis)
@@ -425,7 +420,7 @@ class HttpShutdownTest {
     }
   }
 
-  /** R6: publication arriving just before the second closer's deadline yields a normal return. */
+  /** Publication arriving just before the second closer's deadline yields a normal return. */
   @Test
   void concurrentCloserReturnsNormallyWhenPublicationArrivesBeforeItsDeadline() throws Exception {
     HeldClose h = heldClose(Duration.ZERO, Duration.ofMillis(400));
@@ -457,7 +452,7 @@ class HttpShutdownTest {
     }
   }
 
-  /** R6: interrupting the second closer during its publication remainder throws and re-asserts. */
+  /** Interrupting the second closer during its publication remainder throws and re-asserts. */
   @Test
   void concurrentCloserInterruptedDuringPublicationRemainderThrows() throws Exception {
     HeldClose h = heldClose(Duration.ZERO, Duration.ofSeconds(5));

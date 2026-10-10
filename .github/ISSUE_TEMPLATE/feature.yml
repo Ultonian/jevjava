@@ -1,0 +1,27 @@
+name: Feature request
+description: Explain a use case and the behaviour that would help.
+body:
+  - type: markdown
+    attributes:
+      value: Do not include credentials or private application data. Use synthetic examples.
+  - type: input
+    id: versions
+    attributes:
+      label: SDK and JDK versions
+      description: Include the affected module, SDK version or commit, and JDK version.
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case and current limitation
+      description: What are you trying to do, and what happens today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour and alternatives
+      description: Describe the expected result and any workaround. Keep sample data synthetic.
+    validations:
+      required: true

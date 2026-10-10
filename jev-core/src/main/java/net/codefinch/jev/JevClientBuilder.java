@@ -27,6 +27,8 @@ import net.codefinch.jev.internal.Sleeper;
  * Builds the HTTP {@link JevClient}. Unset values fall back to the environment ({@code
  * TYPESAFE_API_KEY}, {@code TYPESAFE_BASE_URL}, {@code TYPESAFE_DEFAULT_MODEL}, {@code
  * TYPESAFE_LOG_LEVEL}; values are trimmed and blank means unset) and then to the upstream defaults.
+ *
+ * @since 0.1.0
  */
 public final class JevClientBuilder {
 
@@ -229,7 +231,13 @@ public final class JevClientBuilder {
     return this;
   }
 
-  /** Resolves the configuration and creates the client. */
+  /**
+   * Resolves the configuration and creates the client.
+   *
+   * @throws JevException if the API key, default model, log level or timeout/shutdown budget is
+   *     invalid
+   * @throws IllegalArgumentException if the environment base URL is not a valid URI
+   */
   public JevClient build() {
     final String key = resolveApiKey();
     final URI base =

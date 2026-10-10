@@ -84,6 +84,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnCallDoesNotStallOtherDeadlinesNorTheFailedResult() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -115,6 +117,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnCallDoesNotUnboundClose() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch occupied = new CountDownLatch(1);
@@ -152,6 +156,8 @@ class CallObserverLifecycleTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void blockedOnAttemptAndOnCallDoNotDelaySuccessOrCancellation() throws Exception {
     server.enqueueJson(200, OK).enqueueJson(200, OK);
     Blocking observer = new Blocking(true);
@@ -233,7 +239,7 @@ class CallObserverLifecycleTest {
     assertThat(threads).noneMatch(t -> t.getName().contains("jev-deadline"));
   }
 
-  /** R2 finding 3: a terminal event never overtakes an attempt that had already started. */
+  /** A terminal event never overtakes an attempt that had already started. */
   @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
   @org.junit.jupiter.params.provider.ValueSource(strings = {"cancel", "deadline", "close"})
   void attemptStartedBeforeTerminationIsDeliveredBeforeTheTerminalEvent(String path)
@@ -283,8 +289,8 @@ class CallObserverLifecycleTest {
   }
 
   /**
-   * R4 finding: a failure while building the request (before any exchange) must still settle the
-   * attempt's reserved slot, or the terminal ERROR event is stuck behind it forever.
+   * A failure while building the request (before any exchange) must still settle the attempt's
+   * reserved slot, or the terminal ERROR event is stuck behind it forever.
    */
   @org.junit.jupiter.params.ParameterizedTest(name = "{0}")
   @org.junit.jupiter.params.provider.ValueSource(strings = {"sync", "async"})

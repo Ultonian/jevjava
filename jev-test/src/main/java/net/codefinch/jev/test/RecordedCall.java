@@ -13,6 +13,7 @@ import net.codefinch.jev.model.SystemOneRequest;
  * @param request the request, for {@code systemone}
  * @param options the per-call options as passed
  * @param at when it was received
+ * @since 0.1.0
  */
 public record RecordedCall(
     String operation, Optional<SystemOneRequest> request, RequestOptions options, Instant at) {
@@ -25,7 +26,11 @@ public record RecordedCall(
     Objects.requireNonNull(at, "at");
   }
 
-  /** The request, for a {@code systemone} call. */
+  /**
+   * The request, for a {@code systemone} call.
+   *
+   * @throws IllegalStateException if this is a models call with no System One request
+   */
   public SystemOneRequest systemOneRequest() {
     return request.orElseThrow(() -> new IllegalStateException(operation + " call has no request"));
   }

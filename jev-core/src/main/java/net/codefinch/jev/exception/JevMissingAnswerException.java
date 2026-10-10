@@ -6,6 +6,8 @@ import net.codefinch.jev.model.Answers;
  * A typed accessor on {@link Answers} was called for an id the response does not contain. This
  * happens for an id that was never asked, or when the server returned an answer kind this SDK does
  * not recognise (dropped, but still visible in the raw body). Java-only.
+ *
+ * @since 0.1.0
  */
 public class JevMissingAnswerException extends JevException {
   private static final long serialVersionUID = 1L;

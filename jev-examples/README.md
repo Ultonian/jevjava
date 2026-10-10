@@ -22,7 +22,7 @@ JEV_RUN_LIVE_TESTS=1 ./mvnw -q -pl jev-examples test -Dtest=LiveExamplesTest
 
 | Example | Mirrors | Shows |
 |---|---|---|
-| [TicketTriage](src/main/java/net/codefinch/jev/examples/TicketTriage.java) | quickstart | three questions, `NoulThreshold`, `ConfidenceGate`, `Composite` |
+| [TicketTriage](src/main/java/net/codefinch/jev/examples/TicketTriage.java) | [quickstart](https://docs.typesafe.ai/introduction/quickstart) | three questions, `NoulThreshold`, `ConfidenceGate`, `Composite` |
 | [SupportTicketFanOut](src/main/java/net/codefinch/jev/examples/SupportTicketFanOut.java) | [patterns/fan-out](https://docs.typesafe.ai/patterns/fan-out) | speculative questions in one call; code reads only the relevant answers |
 | [ResumeScreening](src/main/java/net/codefinch/jev/examples/ResumeScreening.java) | [patterns/composite-scoring](https://docs.typesafe.ai/patterns/composite-scoring) | `Composite` with two role weightings; concurrent `systemOneAsync` calls |
 | [VoiceBanking](src/main/java/net/codefinch/jev/examples/VoiceBanking.java) | [patterns/confidence-routing](https://docs.typesafe.ai/patterns/confidence-routing) | per-action `ConfidenceGate`s: 0.6 floor, 0.85 to approve a transfer |

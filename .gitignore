@@ -3,7 +3,7 @@ target/
 .cache/trivy/
 # Local benchmark runs, recordings, runtime downloads and notes survive Maven clean.
 jev-benchmarks/results/
-jev-benchmarks/scripts/__pycache__/
+__pycache__/
 .ruff_cache/
 .mvn/wrapper/maven-wrapper.jar
 *.class

@@ -43,6 +43,8 @@ class HttpObserverLifecycleTest {
    */
   @ParameterizedTest(name = "{0}")
   @CsvSource({"cancel", "close", "deadline"})
+  // The clock must distinguish this exact caller thread from worker threads.
+  @SuppressWarnings("ReferenceEquality")
   void terminalEventNeverPrecedesAnAttemptThatStarted(String path) throws Exception {
     server.enqueueJson(200, OK);
     Thread testThread = Thread.currentThread();

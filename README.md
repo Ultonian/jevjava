@@ -18,6 +18,27 @@ runtime behavior and differences from the pinned official SDKs.
 | `jev-examples` | — | eight runnable examples mirroring the docs; not published |
 | [`jev-benchmarks`](jev-benchmarks/README.md) | `jev-core`, `jev-micrometer`, JMH, HdrHistogram | component, loopback HTTP and in-memory transport benchmarks; run manually; not published |
 
+## Requirements and compatibility
+
+Java 21 is the minimum runtime and bytecode target. CI requires Temurin JDK 21 and 25. Rolling
+latest-GA checks and weekly early-access probes are advisory; their failures are reported without
+expanding the required support matrix. Core uses the Jackson 2.22 runtime family; the Micrometer
+module adds Micrometer dependencies.
+
+The built-in JDK HTTP client prefers HTTP/2 and falls back to HTTP/1.1 according to the server,
+proxy and transport configuration; no extra HTTP/2 library is needed. An injected `HttpClient`
+controls its own protocol preference. See [JDK protocol selection](https://docs.oracle.com/en/java/javase/21/docs/api/java.net.http/java/net/http/HttpClient.Builder.html#version(java.net.http.HttpClient.Version)).
+The tracked API schema is OpenAPI `info.version` 0.2.0; [pinned references](docs/PARITY.md#pinned-references)
+record the exact upstream inputs and the limits of that comparison.
+
+## Versioning and stability
+
+This SDK uses its own semantic versioning, independent of the service, model and official SDK
+versions. Before 1.0, a new minor release may break source or binary compatibility; patch releases
+preserve the public API. Unreleased snapshots can change between builds. All published modules
+use the same version. The changelog's "Upstream tracked" line identifies comparison baselines,
+not this SDK's release number or a guarantee about newer upstream releases.
+
 ## Usage
 
 Not on Maven Central yet. Until it is, install locally and depend on the snapshot:
@@ -224,7 +245,7 @@ for (ItemAnswer<String> a : spam.answers(client.systemOne(state, spam.questions(
 
 ## Metrics and testing
 
-Add `net.codefinch.jev:jev-micrometer:0.1.0-SNAPSHOT` for metrics. Provide your application's
+Add `net.codefinch.jev:jev-micrometer`, using the same version as `jev-core`, for metrics. Provide your application's
 Micrometer `MeterRegistry` and an API key:
 
 ```java
@@ -237,16 +258,8 @@ JevClient client = JevClient.builder().apiKey(apiKey).observer(metrics).build();
 Observer delivery is asynchronous, so metrics may arrive after a request returns. Close the client
 on application shutdown; your application owns the registry.
 
-For application tests, add the test client with Maven's `test` scope:
-
-```xml
-<dependency>
-  <groupId>net.codefinch.jev</groupId>
-  <artifactId>jev-test</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
-  <scope>test</scope>
-</dependency>
-```
+For application tests, add `net.codefinch.jev:jev-test` with Maven's `test` scope and the same
+version as `jev-core`:
 
 ```java
 try (RecordingJevClient fake = new RecordingJevClient()
@@ -258,7 +271,7 @@ try (RecordingJevClient fake = new RecordingJevClient()
 `RecordingJevClient` and `ScriptedAnswers` are in `net.codefinch.jev.test`. The fake needs no API
 key or network access. Scripts are consumed in order; once exhausted, the default responder
 returns neutral answers. Use `enqueueFailure(...)` for error paths. It does not simulate HTTP
-retry/backoff behavior. After `ScriptedAnswers.neutral(questions)`, use
+retries, timeouts or deadlines. After `ScriptedAnswers.neutral(questions)`, use
 `choice("department", "billing", 0.9, 0.8)` or `score("severity", 1.5, 0.8)` to override an answer
 using its original question definition. Scripts created with `empty()` need an explicit question
 or a raw answer. Numeric values are intentionally not range-validated, so tests can model
@@ -275,41 +288,14 @@ run against the live API with `TYPESAFE_API_KEY`, otherwise against a scripted f
 ./mvnw -q -DskipTests install && ./mvnw -q -pl jev-examples exec:java
 ```
 
-## Building
+## Build from source
 
-Use JDK 21+ and install [Trivy 0.75.0](https://github.com/aquasecurity/trivy/releases/tag/v0.75.0)
-on your `PATH`, plus `pre-commit` 4.6.2 (`pipx install pre-commit==4.6.2`).
-The Maven wrapper downloads the pinned Maven version.
+Use JDK 21+; the Maven wrapper downloads the pinned Maven version.
 
 ```sh
-./mvnw verify          # compile (-Werror), Checkstyle, tests, JaCoCo >= 85 % on core, SpotBugs
-pre-commit install --install-hooks   # once per clone
-pre-commit run --all-files           # Maven, Trivy and repository checks
-trivy fs --config trivy.yaml .       # run the security scan separately
+./mvnw verify
 ```
 
-Pre-commit runs Trivy on every commit, using the same [scan policy](trivy.yaml) as CI: fail on
-HIGH/CRITICAL vulnerabilities with available fixes, misconfigurations and secrets. It excludes
-generated `target/` directories, benchmark archives and local `.env` files. Trivy's POM scanner
-covers compile/runtime dependencies; Maven plugins and test-scope dependencies are outside that
-scan. Trivy must be installed; a missing binary or failed scan blocks the commit.
-The first scan downloads its database; later scans reuse the cache and refresh it when needed,
-so network access is still required for refreshes and uncached Maven metadata. CI runs Trivy in
-its own job rather than duplicating it in the pre-commit job.
-That job waits for the builds and restores their Maven dependency cache before scanning. If the
-cache is unavailable, it first runs `./mvnw -DskipTests install` to resolve the full reactor.
-This avoids starting Trivy with an empty Maven cache and fetching every dependency POM again.
-Dependency lookups and vulnerability database refreshes remain enabled; scan failures still fail CI.
-
-The normal gate needs no credentials. Live tests require both `JEV_RUN_LIVE_TESTS=1` and
-`TYPESAFE_API_KEY`. To opt in, copy `.env.example` to `.env` (git-ignored), add your key, and
-source it into the shell first. These tests make real API calls and consume account usage:
-
-```sh
-set -a; . ./.env; set +a
-./mvnw verify                        # LiveApiTest / LiveExamplesTest now run against the API
-```
-
-Maintainer notes: [architecture](.github/maintainers/INTERNAL_ARCHITECTURE.md),
-[release strategy](.github/maintainers/RELEASING.md) and
-[fixture provenance](.github/maintainers/UPSTREAM_FIXTURES.md).
+See [CONTRIBUTING](CONTRIBUTING.md) for tool setup, pre-commit checks and opt-in live tests.
+Report vulnerabilities through the private channel in [SECURITY](SECURITY.md).
+Release and snapshot migration notes are in the [changelog](CHANGELOG.md).

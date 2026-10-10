@@ -16,20 +16,36 @@ import net.codefinch.jev.model.ScoreAnswer;
  * @param index its position in the fan-out
  * @param id the question id the fan-out used for it
  * @param answer the answer, or empty if the server returned none for this id
+ * @since 0.1.0
  */
 public record ItemAnswer<T>(T item, int index, String id, Optional<Answer> answer) {
 
-  /** The noul answer. */
+  /**
+   * The noul answer.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a noul answer
+   */
   public NoulAnswer noul() {
     return typed(NoulAnswer.class);
   }
 
-  /** The choice answer. */
+  /**
+   * The choice answer.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a choice answer
+   */
   public ChoiceAnswer choice() {
     return typed(ChoiceAnswer.class);
   }
 
-  /** The score answer. */
+  /**
+   * The score answer.
+   *
+   * @throws JevMissingAnswerException if no answer is present for this id
+   * @throws JevAnswerTypeException if the answer is not a score answer
+   */
   public ScoreAnswer score() {
     return typed(ScoreAnswer.class);
   }

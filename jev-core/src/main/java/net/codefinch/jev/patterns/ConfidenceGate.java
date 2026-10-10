@@ -14,10 +14,15 @@ import net.codefinch.jev.model.ScoreAnswer;
  *
  * @param low below this, escalate to a person
  * @param high at or above this, act without confirmation
+ * @since 0.1.0
  */
 public record ConfidenceGate(double low, double high) {
 
-  /** The routing decision. */
+  /**
+   * The routing decision.
+   *
+   * @since 0.1.0
+   */
   public enum Decision {
     /** Confident enough to act automatically. */
     ACT,

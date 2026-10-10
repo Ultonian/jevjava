@@ -11,6 +11,9 @@
   <artifactId>jev-micrometer</artifactId>
   <name>Jev Java Unofficial SDK - Micrometer integration</name>
   <description>Micrometer metrics for the Jev client: call and attempt timers, token counters, and allowlisted per-question confidence summaries.</description>
+  <properties>
+    <jacoco.line.minimum>0.95</jacoco.line.minimum>
+  </properties>
 
   <dependencies>
     <dependency>
@@ -34,8 +37,13 @@
       <scope>test</scope>
     </dependency>
   </dependencies>
+
   <build>
     <plugins>
+      <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>

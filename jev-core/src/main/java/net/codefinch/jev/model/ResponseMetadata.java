@@ -14,6 +14,7 @@ import java.util.TreeMap;
  * @param requestId the {@code x-typesafe-request-id} header, if the server sent one
  * @param headers all response headers, case-insensitive keys, unmodifiable
  * @param rawBody the body as received, before any parsing
+ * @since 0.1.0
  */
 public record ResponseMetadata(
     Optional<String> requestId, Map<String, List<String>> headers, String rawBody) {

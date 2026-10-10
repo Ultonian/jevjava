@@ -12,6 +12,10 @@
   <name>Jev Java Unofficial SDK - Test helpers</name>
   <description>RecordingJevClient: an in-memory JevClient for tests that returns scripted answers and records requests.</description>
 
+  <properties>
+    <jacoco.line.minimum>0.95</jacoco.line.minimum>
+  </properties>
+
   <dependencies>
     <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
@@ -38,6 +42,10 @@
   <build>
     <plugins>
       <plugin>
+        <groupId>org.jacoco</groupId>
+        <artifactId>jacoco-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <configuration>
@@ -53,7 +61,7 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <argLine>-Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1</argLine>
+          <argLine>@{argLine} -Djdk.virtualThreadScheduler.parallelism=1 -Djdk.virtualThreadScheduler.maxPoolSize=1</argLine>
         </configuration>
       </plugin>
     </plugins>

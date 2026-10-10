@@ -10,10 +10,15 @@ import net.codefinch.jev.model.NoulAnswer;
  *
  * @param no at or below this, treat as no
  * @param yes at or above this, treat as yes
+ * @since 0.1.0
  */
 public record NoulThreshold(double no, double yes) {
 
-  /** The routing decision. */
+  /**
+   * The routing decision.
+   *
+   * @since 0.1.0
+   */
   public enum Decision {
     /** Probability at or above the yes threshold. */
     YES,

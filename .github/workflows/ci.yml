@@ -2,16 +2,24 @@ name: CI
 
 on:
   push:
-    branches: [main]
+    branches: [main, "release/**"]
   pull_request:
+  workflow_dispatch:
+  schedule:
+    - cron: "23 5 * * 1"
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   verify:
     name: Build and verify (JDK ${{ matrix.java }})
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -32,6 +40,9 @@ jobs:
           key: maven-wrapper-${{ hashFiles('.mvn/wrapper/maven-wrapper.properties') }}
       - name: Verify (compile -Werror, Checkstyle, tests, JaCoCo, SpotBugs)
         run: ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Check public API compatibility
+        if: matrix.java == '21'
+        run: python3 -B scripts/api_compat.py
       - name: Upload JaCoCo report
         if: matrix.java == '21'
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -43,11 +54,12 @@ jobs:
   pre-commit:
     name: pre-commit hooks (non-Maven)
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.x"
+          python-version: "3.12"
       - run: pipx install pre-commit==4.6.2
       # Dedicated jobs run Maven and Trivy; local commits run both hooks.
       - run: SKIP=maven-verify,trivy pre-commit run --all-files
@@ -57,6 +69,7 @@ jobs:
     # Wait for setup-java's post-build cache save before restoring Maven dependencies.
     needs: verify
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
@@ -76,3 +89,54 @@ jobs:
           scan-type: fs
           scan-ref: .
           trivy-config: trivy.yaml
+
+  analysis:
+    name: Error Prone (JDK 21)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+      - run: ./mvnw --batch-mode --no-transfer-progress -Panalysis -pl jev-core,jev-test,jev-micrometer -am clean verify
+      - name: Prove analysis and compatibility gates with deliberate failures
+        run: python3 -B scripts/prove_gates.py
+
+  runtime-probes:
+    name: Advisory JDK ${{ matrix.runtime }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        runtime: ${{ fromJSON((github.event_name == 'schedule' || github.event_name == 'workflow_dispatch') && '["latest","ea"]' || '["latest"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Resolve runtime
+        id: runtime
+        env:
+          RUNTIME: ${{ matrix.runtime }}
+        run: |
+          if [ "$RUNTIME" = ea ]; then
+            version=$(python3 -B scripts/monitor.py ea)
+          else
+            version=latest
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+      - uses: actions/setup-java@de7274f081f381c8f8158605e0321c36c376e2e6 # v6.0.1
+        with:
+          distribution: temurin
+          java-version: ${{ steps.runtime.outputs.version }}
+          check-latest: true
+          cache: maven
+      - name: Record resolved runtime
+        run: java -version 2>&1 | tee -a "$GITHUB_STEP_SUMMARY"
+      - run: ./mvnw --batch-mode --no-transfer-progress clean verify
+      - name: Surface advisory failure
+        if: failure()
+        run: |
+          echo "::warning::Advisory runtime failed; this check is not required for merging."
+          echo "Advisory runtime probe failed. Required support remains JDK 21/25." >> "$GITHUB_STEP_SUMMARY"

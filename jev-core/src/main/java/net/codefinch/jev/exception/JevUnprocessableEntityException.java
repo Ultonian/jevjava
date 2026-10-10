@@ -12,6 +12,8 @@ import net.codefinch.jev.internal.ErrorMessages;
  * {"detail": [{"loc", "msg", "type"}]}} shape the entries are exposed as {@link #fieldErrors()};
  * for any other body shape that list is empty and the raw body is still available. Mirrors upstream
  * {@code TypeSafeUnprocessableEntityError}.
+ *
+ * @since 0.1.0
  */
 public class JevUnprocessableEntityException extends JevApiException {
   private static final long serialVersionUID = 1L;
@@ -36,6 +38,7 @@ public class JevUnprocessableEntityException extends JevApiException {
    * @param path dotted {@code loc} with the leading {@code body} segment removed; may be empty
    * @param message the {@code msg}
    * @param type the {@code type}, or empty string if absent
+   * @since 0.1.0
    */
   public record FieldError(String path, String message, String type) implements Serializable {
     private static final long serialVersionUID = 1L;

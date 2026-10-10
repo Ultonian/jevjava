@@ -170,10 +170,7 @@ class JevMetricsTest {
         .isInstanceOf(UnsupportedOperationException.class);
   }
 
-  /**
-   * Plan §6 Phase 3 gate: 1 000 distinct question ids must not create new series unless
-   * allowlisted.
-   */
+  /** 1 000 distinct question ids must not create new series unless allowlisted. */
   @Test
   void thousandDistinctQuestionIdsCreateNoSeriesWithoutAllowlist() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();

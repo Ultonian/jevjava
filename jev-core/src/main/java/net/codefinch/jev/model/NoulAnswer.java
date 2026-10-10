@@ -5,6 +5,7 @@ package net.codefinch.jev.model;
  * because a two-outcome distribution is fully described by this one number.
  *
  * @param noul probability of yes, in {@code [0, 1]}
+ * @since 0.1.0
  */
 public record NoulAnswer(double noul) implements Answer {
 

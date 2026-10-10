@@ -27,6 +27,8 @@ import net.codefinch.jev.internal.Json;
  * handed out by {@link #toJson()} are fresh copies, and no accessor exposes internal state. A
  * request built from content therefore serialises to the same bytes on every retry, regardless of
  * what the caller later does to the objects it built the content from.
+ *
+ * @since 0.1.0
  */
 public sealed interface Content
     permits Content.Text, Content.JsonObject, Content.JsonArray, Content.Null {
@@ -87,7 +89,11 @@ public sealed interface Content
     return false;
   }
 
-  /** Text content. */
+  /**
+   * Text content.
+   *
+   * @since 0.1.0
+   */
   record Text(String value) implements Content {
     /** Validates the text. */
     public Text {
@@ -105,7 +111,11 @@ public sealed interface Content
     }
   }
 
-  /** A JSON object. The tree is private; {@link #toJson()} returns a copy. */
+  /**
+   * A JSON object. The tree is private; {@link #toJson()} returns a copy.
+   *
+   * @since 0.1.0
+   */
   final class JsonObject implements Content {
     private final JsonNode tree;
 
@@ -134,7 +144,11 @@ public sealed interface Content
     }
   }
 
-  /** A JSON array. The tree is private; {@link #toJson()} returns a copy. */
+  /**
+   * A JSON array. The tree is private; {@link #toJson()} returns a copy.
+   *
+   * @since 0.1.0
+   */
   final class JsonArray implements Content {
     private final JsonNode tree;
 
@@ -163,7 +177,11 @@ public sealed interface Content
     }
   }
 
-  /** JSON {@code null}. Use {@link Content#NULL}. */
+  /**
+   * JSON {@code null}. Use {@link Content#NULL}.
+   *
+   * @since 0.1.0
+   */
   final class Null implements Content {
     private Null() {}
 

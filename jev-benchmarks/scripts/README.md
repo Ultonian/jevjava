@@ -1,9 +1,10 @@
 # Repeated benchmark studies
 
 These optional Python scripts run fixed protocols around the Java runners described in the
-[benchmark README](../README.md). Running measurements requires Linux, Python 3.9+, `taskset`, CPU
+[benchmark README](../README.md). Running measurements requires Linux, Python 3.12+, `taskset`, CPU
 affinity support and a clean committed checkout. Archive audits and script tests need only Python
-3.9+. Build and verify the JAR from that checkout before running; the scripts archive it and
+3.12+, the same floor as the [contributor tools](../../CONTRIBUTING.md#setup-and-checks).
+Build and verify the JAR from that checkout before running; the scripts archive it and
 the source, but cannot prove that a supplied JAR was built from the current source.
 
 Choose eight available physical cores with `lscpu -e=CPU,CORE,SOCKET,ONLINE`, account for their SMT

@@ -11,6 +11,7 @@ import java.util.Objects;
  * @param choice the selected label
  * @param probabilities probability per label, in response order
  * @param confidence how concentrated the probability mass is, in {@code [0, 1]}
+ * @since 0.1.0
  */
 public record ChoiceAnswer(String choice, Map<String, Double> probabilities, double confidence)
     implements Answer {

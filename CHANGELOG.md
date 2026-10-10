@@ -1,258 +1,75 @@
 # Changelog
 
-All notable changes to this project are documented here. The format follows
-[Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+Notable user-facing changes follow [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
+This SDK has its own versioning; upstream versions below are compatibility references.
 
 Upstream tracked: `@typesafe-ai/sdk` 0.6.0, `typesafe-sdk` (Python) 0.7.2, OpenAPI `info.version` 0.2.0.
-Python 0.7.2 adds the optional `http2` packaging extra and documentation; the audited behavioural
-baseline remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references).
+Python 0.7.2 adds optional HTTP/2 packaging and documentation; the audited behavioural baseline
+remains 0.7.1. See [pinned references](docs/PARITY.md#pinned-references).
 
 ## [Unreleased]
 
-### Security
-- Update Jackson to 2.22.3, addressing CVE-2026-89407, CVE-2026-89425, CVE-2026-91776
-  and CVE-2026-91777.
-- Run Trivy before every commit with the same HIGH/CRITICAL policy as CI, excluding generated
-  output and local credentials. Vulnerability databases are cached with automatic refresh;
-  CI pins Trivy 0.75.0.
-
-### Changed
-- Simplify retry handling and shared test fixtures; centralize benchmark JVM/load settings and
-  process cleanup. Benchmark study scripts now use importable modules while keeping their CLI
-  entry points and archive formats. Fixed study runs require an explicit `--cpus` selection.
-- Remove public access to the internal HTTP client's resolved configuration and lifecycle test
-  hooks. Content copying and per-call policy resolution are now private/internal implementation
-  details: `Content.Pure`, `Content.isContentType`, `RequestOptions.resolveRetry` and
-  `RequestOptions.deadlineDisabled` are no longer public. Snapshot callers using these helpers
-  must update their code and recompile.
-- Rename `JevMetrics.Builder.questionTags(...)` to `allowQuestions(...)` and its read-only getter
-  to `allowedQuestions()`. Snapshot consumers must update these calls and recompile.
-- Clarify that the SDK protects its three specific `X-TypeSafe-*` request headers; other names
-  remain caller-controlled.
-- Move the 20 request/response data types to `net.codefinch.jev.model`, keeping each sealed
-  hierarchy together. The root package now contains only the five client/configuration entry
-  points. Update model imports and recompile; Maven coordinates and behavior are unchanged.
-- Move SDK-specific exceptions to `net.codefinch.jev.exception`. This pre-release package change
-  requires updated imports and recompilation; exception names and inheritance remain the same.
-- Focus `docs/` on SDK usage and compatibility, remove completed refactoring reports, and move
-  architecture, release-process and fixture-provenance notes to `.github/maintainers/`.
-- Run CI's Trivy scan after the Maven builds and restore their dependency cache, with a reactor
-  install fallback when the cache is unavailable, to avoid repeated uncached Maven Central lookups.
-- Rename the project to `jevjavauosdk` (Jev Java Unofficial SDK), clarify its independent status
-  in documentation and Maven metadata, and identify requests as `jevjavauosdk/<version>` in
-  `User-Agent` and `X-TypeSafe-SDK`. Maven coordinates and Java packages remain unchanged.
-- Refresh stable test/build dependencies, the Maven distribution, pre-commit hooks and pinned
-  GitHub Actions. Adopt JUnit 6 and current Checkstyle/Google Java Format while retaining Java 21
-  as the SDK's minimum runtime.
-- Keep Google Java Format at 1.36.1: 1.37.0 removed `Style.valueOf`, which the latest
-  Spotless 3.10.3 still requires.
+Initial release in preparation; not yet published to Maven Central.
 
 ### Added
-- Scoped Ruff linting and CLI checks for benchmark study scripts, without timed workloads in CI.
-- `ScriptedAnswers.neutral(questions)` retains question context for `choice(id, label, probability,
-  confidence)` and `score(id, score, confidence)` overrides without casts. Explicit-question and
-  raw-answer overloads remain available, including for deliberately malformed fixtures.
-- Stable automatic-module names: `net.codefinch.jev`, `net.codefinch.jev.test` and
-  `net.codefinch.jev.micrometer`. These reserve names without claiming JPMS encapsulation.
-- [`jev-benchmarks`](jev-benchmarks/README.md): an unpublished, manually run benchmark module
-  for component timing/allocation, local HTTP workloads and synthetic in-memory transport.
-- Reproducible fixtures, recorded runtime/source identities, raw results and summaries, plus
-  restricted JFR diagnostics and optional scripts for repeated studies and runtime comparisons.
-  Runs need no live API credentials; CI checks the harness without running timed benchmarks.
 
-### Fixed
-- Keep benchmark script entry points usable with Python safe-path mode (`-P` or
-  `PYTHONSAFEPATH=1`). Finalize the manifest and stop the benchmark child if shutdown-hook
-  registration fails.
-- Apply ticket triage's refund priority boost at the same inclusive threshold as its refund
-  workflow, and print the source only once when running all examples.
-
-### Security (Python 0.7.1 parity)
-- The API key is stripped of surrounding whitespace and validated when the client is built: an
-  empty key, or one with internal whitespace, control or non-ASCII characters, throws
-  `JevException` without the key in the message. An explicit invalid key no longer falls back to
-  `TYPESAFE_API_KEY`. Previously a key with a stray newline reached the request, where the JDK's
-  error quoted the whole `Authorization` value into the exception.
-- An invalid request header value is reported by header name only; the JDK exception that quotes
-  the value is no longer chained.
-- Tracks Python `typesafe-sdk` 0.7.1 (JavaScript and OpenAPI unchanged).
-
-### Changed (readability refactor)
-- Split HTTP client responsibilities between `HttpJevClient` (admission and shutdown),
-  package-private `CallExecution` (per-call lifecycle), `HttpExchange` (one HTTP exchange), and
-  `CallSpec` (endpoint and parser). Public API signatures, wire behavior and configuration
-  defaults remain unchanged.
-- Organised `RecordingJevClient` around script, recording and lifecycle ownership, with explicit
-  execution and publication helpers; it retains an independent implementation.
-- Split transport and observer regression tests into focused suites with a shared HTTP fixture.
-- Clarified that SDK result publication uses virtual threads, while non-async
-  `CompletableFuture` callbacks follow the JDK's execution rules.
-
-### Added (readability refactor)
-- Eight shared lifecycle contracts exercised against both HTTP and recording clients.
-- [Internal architecture](.github/maintainers/INTERNAL_ARCHITECTURE.md). Verification passed on JDK 21
-  and 25; the subsequent live-service run on JDK 25 passed all 298 tests with no skips,
-  including all eight examples (22 September 2026).
-
-### Fixed (readability refactor review)
-- Removed a race in the shared contract's callback-thread assertion by awaiting the dependent
-  callback before reading the source result.
-- Made the test fixture's held-delivery queue transitions atomic with release, preventing lost
-  or duplicate deliveries; task launches remain outside the lock. Added three deterministic
-  regression cases.
-
-### Fixed (Phase 3 review, fourth pass)
-- A failure while building the HTTP request (for example an invalid header name from
-  `RequestOptions`) now settles the attempt's reserved observer slot, so the call's terminal
-  `ERROR` event is delivered instead of being stuck behind it; the attempt event carries the
-  failure and no status.
-- The fake's interrupted-close test holds the scheduler's only carrier so publication is
-  deterministically pending when the closer is interrupted.
-- Two lifecycle tests no longer assume an ordering the client does not promise (events of
-  different calls relative to each other; a closer thread's exit relative to its completed
-  shutdown), which failed on slow CI runners. `HttpJevClient.isShutdownComplete()` exposes the
-  state the second check needs.
-
-### Fixed (Phase 3 review, third pass)
-- The client's log level now filters every SDK message for that client, including the parser's
-  unknown-answer warning and observer-exception warnings, through a per-client `Diagnostics`
-  sink; the warning text renders the real answer id and type.
-- Attempt start is atomic with termination: an attempt either never starts after cancellation,
-  deadline expiry or `close()`, or its observer event precedes the terminal event.
-- `RecordingJevClient.close()` parks instead of spinning while awaiting publication, so a closing
-  virtual thread cannot starve its own publication threads; the module's tests run on a
-  single-carrier scheduler to prove it.
-- `EntityAlignment` routes CONFIRM to the curator (with the suggested outcome) and
-  `SupportTicketFanOut` asks an agent to confirm the category; only ACT is automatic.
-- The README cancellation sample's test holds the executor before cancelling.
+- Java 21+ synchronous and asynchronous clients for System One requests and model discovery,
+  with environment configuration, per-call overrides and immutable request/response types.
+- Typed noul, choice and score answers; structured HTTP and validation exceptions retaining
+  status, request id and response details.
+- Configurable retries, server-directed backoff, attempt timeouts, operation deadlines,
+  cancellation and bounded shutdown. Caller-supplied transports and executors remain caller-owned.
+  Terminal-state and observer ordering are preserved through cancellation and concurrent shutdown;
+  blocked callbacks do not extend the shutdown guarantee.
+- Snapshots of nested Jackson content and validation of trailing JSON, required response fields
+  and numeric ranges.
+- Routing helpers: `NoulThreshold`, `ConfidenceGate`, normalized `Composite` scores and `FanOut`.
+  Composite weighting supports extreme finite weights. Applications choose their own thresholds.
+- `jev-test`: a recording client and scripted answers for tests without credentials or network
+  access. Question-aware `choice` and `score` overloads avoid casts; numeric fixtures may deliberately
+  be malformed. The fake does not simulate HTTP retries, timeouts or deadlines.
+- `jev-micrometer`: call/attempt timers, token counters and allowlisted per-question summaries.
+  Observer delivery is asynchronous and isolated from request execution and shutdown.
+- Eight runnable examples and an unpublished [benchmark tool](jev-benchmarks/README.md) with local
+  HTTP, synthetic transport, component timing/allocation and restricted JFR diagnostics.
+- Automatic-module names `net.codefinch.jev`, `net.codefinch.jev.test` and
+  `net.codefinch.jev.micrometer`; classpath use remains supported.
+- Coverage gates for all published libraries, focused Error Prone analysis, public API compatibility
+  checks and scheduled dependency/upstream/runtime monitoring.
+- Contributor instructions, private security reporting, issue forms and public API Javadoc.
+  Internal implementation packages are excluded from generated API documentation.
 
 ### Changed
-- Log levels now match the official SDKs: attempt summaries, retries, transport failures and
-  aborts at INFO; headers and bodies at DEBUG; dropped answer kinds at WARNING. The default gate
-  is WARNING (the JavaScript SDK's default), so healthy calls log nothing unless opted in.
 
-### Added
-- Seven more examples in `jev-examples`, each mirroring a docs page and verified against the live
-  API: `SupportTicketFanOut`, `ResumeScreening`, `VoiceBanking`, `IntentRouting`, `LineSearch`,
-  `Rerank` (the `FanOut` helper), `EntityAlignment`; an `AllExamples` runner and an opt-in
-  `LiveExamplesTest`.
+- Name the project **jevjavauosdk — Jev Java Unofficial SDK** and clearly state its independence
+  from TypeSafe AI. Requests identify it as `jevjavauosdk/<version>`; service-required header and
+  environment-variable names remain unchanged.
+- Refresh build/test dependencies and Jackson to 2.22.3. Keep Java 21 as the bytecode baseline;
+  CI verifies JDK 21 and 25.
+- Benchmark study scripts retain their command names and archive formats, but fixed study runs
+  now require explicit `--cpus`. Python safe-path mode is supported. A changed harness needs fresh
+  performance baselines; historical archives remain readable.
 
-### Fixed (Phase 3 review, second pass)
-- Observer events keep their promised order even when cancellation, deadline expiry or `close()`
-  ends a call mid-attempt: an attempt reserves its slot in the call's event sequence when it
-  starts, so the terminal event is delivered after it.
-- `RecordingJevClient` registers async calls atomically with admission, publishes every
-  completion (results and cancellations) on a virtual thread, and bounds `close()` on publication
-  only — never on application continuations.
-- A cancellation observer test no longer depends on a scheduling race.
+### Snapshot migration
 
-### Fixed (Phase 3 review)
-- Observer events are dispatched on delivery threads, serialised per call, never on the deadline
-  timer, the closing thread or the operation thread; a blocked observer no longer stalls other
-  deadlines or unbounds `close()`.
-- `RecordingJevClient` keeps the interface's lifecycle contract: async calls run on an executor
-  and return at once, `close()` cancels outstanding futures, calls after close throw
-  `IllegalStateException` (async included); `lastCall()` reads one snapshot.
-- `ScriptedAnswers` bodies are real wire JSON that the core parser accepts; the fake's default
-  models body matches its typed list.
-- `Composite.apply` rescales weights by the maximum, so extreme finite weights neither overflow
-  nor underflow the mean.
-
-### Added (Phase 3)
-- `CallObserver`: per-attempt and per-call events from the client (operation, outcome, attempts,
-  elapsed, status, model, response, failure); observers never affect the call.
-- `net.codefinch.jev.patterns`: `FanOut` (one question per item, item bound structurally into
-  its instructions), `Composite` (normalised weighted score), `ConfidenceGate` and
-  `NoulThreshold` (three-way routing; thresholds always caller-supplied).
-- `jev-micrometer`: `JevMetrics` with bounded tags (`jev.call`, `jev.attempt`, `jev.tokens`) and
-  allowlisted per-question `jev.confidence` / `jev.noul` summaries; a 1 000-id cardinality test.
-- `jev-test`: `RecordingJevClient` and `ScriptedAnswers` — scripted or neutral answers shaped
-  from the questions, recorded requests, interface close semantics.
-- `jev-examples`: `TicketTriage`, runnable against the API or the fake; exercised in CI.
+- Move request/response types to `net.codefinch.jev.model` and SDK exceptions to
+  `net.codefinch.jev.exception`. Update imports and recompile. Maven coordinates are unchanged.
+- Rename `JevMetrics.Builder.questionTags(...)` to `allowQuestions(...)` and its getter to
+  `allowedQuestions()`.
+- Remove public access to HTTP client configuration/lifecycle test hooks, `Content.Pure`,
+  `Content.isContentType`, `RequestOptions.resolveRetry` and `RequestOptions.deadlineDisabled`.
+  Use the public builder, model and per-call options APIs instead; `.internal` is unsupported.
 
 ### Security
-- Jackson 2.19.0 → 2.22.2: fixes GHSA-r7wm-3cxj-wff9 (jackson-core) and CVE-2026-54512 /
-  CVE-2026-54513 (jackson-databind), all HIGH, reported by Trivy on the first CI run.
 
-### Added
-- Project skeleton with the quality gate (google-java-format via Spotless, Checkstyle Google style,
-  SpotBugs max effort, JaCoCo 85 % line gate on `jev-core`, `-Werror`, pre-commit hooks, CI on
-  JDK 21 and 25 with Trivy).
-- Phase 1 of `jev-core`: deeply immutable `Content`; `State`; `NoulQuestion`/`ChoiceQuestion`/
-  `ScoreQuestion` with builders; `Questions`; `SystemOneRequest` with per-call model override; the
-  sealed `Answer` hierarchy and `Answers` accessors; `SystemOneResponse`, `Usage`, `ModelList`,
-  `ModelMetadata`, `ResponseMetadata`; the `Jev*Exception` hierarchy with upstream-order message
-  extraction and 422 field errors; `RetryAfter` parsing; `RequestOptions`; the `JevClient`
-  interface (HTTP implementation follows in Phase 2).
-- `docs/PARITY.md`: the parity matrix against the pinned Python 0.7.0 and JavaScript 0.6.0 SDKs and
-  OpenAPI 0.2.0; 47 rows proven by tests, 20 pending Phase 2 / live probes.
+- Reject invalid API keys before creating a header, without echoing them. Invalid explicit keys
+  never fall back to environment credentials. Reject unsafe header values without retaining a
+  cause that exposes the value; enforce no redirects for owned and injected transports.
+- Redact credential headers and filter diagnostics per client. DEBUG/TRACE bodies and exception
+  response data may still contain private application data.
+- Run Trivy in pre-commit and CI; see [scan coverage and exclusions](CONTRIBUTING.md#setup-and-checks).
 
-- Phase 2 of `jev-core`: the HTTP `JevClient` (`JevClient.builder()`, `fromEnv()`) on
-  `java.net.http` with virtual-thread async, `RetryPolicy` reproducing both upstream SDKs' defaults
-  (408/429/5xx, 2 retries, 500 ms→5 s backoff with 25 % subtractive jitter, `retry-after-ms` /
-  `retry-after`, 60 s server-delay cap), a hard 30 s operation deadline (Java-only), per-call
-  `RequestOptions` (timeout, deadline, headers, partial retry override), cancellation that reaches
-  the in-flight exchange and backoff, interruption handling, bounded `close()`, env configuration
-  (`TYPESAFE_API_KEY`, `TYPESAFE_BASE_URL`, `TYPESAFE_DEFAULT_MODEL`, `TYPESAFE_LOG_LEVEL`), and
-  opt-in live probes (`JEV_RUN_LIVE_TESTS=1`).
+Compatibility limits and historical service observations are documented in [PARITY](docs/PARITY.md).
+Detailed development and review history remains in Git.
 
-### Changed
-- Live API observations (21 Sep 2026) recorded in PARITY.md and asserted in `LiveApiTest`: the
-  10-level / 255-option limits are server-enforced with HTTP 400, an invalid key is 401 (missing
-  key 403), omitted and `null` instructions are equivalent, `release_date` is an ISO timestamp.
-
-### Fixed (Phase 2 review, sixth pass)
-- A concurrent `close()` carries one absolute deadline across its two waits (for the first closer,
-  then for publication), so it can no longer spend the publication timeout twice and exceed the
-  documented grace + publication bound.
-
-### Fixed (Phase 2 review, fifth pass)
-- A concurrent or repeated `close()` no longer returns as a silent no-op: it waits for the first
-  closer's shutdown, re-checks that every future is done, and throws under the same
-  timeout/interruption rules, so the "returned normally ⇒ all done" guarantee holds for every call.
-
-### Fixed (Phase 2 review, fourth pass)
-- Explicitly cancelled calls release their tracking entry immediately (they previously accumulated
-  for the life of the client).
-- The publication wait in `close()` is an explicit, configurable `publicationTimeout` (default
-  5 s); expiry or interruption makes `close()` throw `JevException` after shutting down owned
-  resources instead of returning as if every result were done.
-
-### Fixed (Phase 2 review, third pass)
-- `close()` returns only once every outstanding result is terminal: it waits for publication (a
-  state transition on a delivery thread) but never for application callbacks; verified over 200
-  trials with caller-owned resources.
-- Completions are published on a fresh virtual thread each (no pooled delivery executor), so a
-  `close()` racing the hand-off can no longer make a callback run inline on the deadline scheduler
-  or the operation executor.
-
-### Fixed (Phase 2 fix review)
-- Public future completion is delivered on an SDK virtual thread after lifecycle bookkeeping, so
-  application callbacks can no longer stall the deadline scheduler, unbound `close()`, or observe a
-  cancelled future while its HTTP exchange could still retry.
-- Call admission is atomic with the transition to closed; a call racing `close()` is rejected or
-  cancelled, never sent after shutdown returned.
-- DEBUG retry diagnostics carry only exception class, status, attempt and delay; body-derived
-  messages moved to TRACE.
-
-### Fixed (Phase 2 review)
-- The operation deadline is measured from submission, so executor queueing counts; a queued
-  async call now expires on the client's own timer even when its executor never runs it, and an
-  expired task never sends a request.
-- `close()` completes every outstanding future with `CancellationException`, including calls still
-  queued on a caller-owned executor, so joining SDK futures after shutdown cannot hang.
-- Retry diagnostics honour the client's log level; log capture tests cover OFF/INFO/DEBUG/TRACE
-  and prove credential redaction on request and response headers.
-- Injected `HttpClient`s must use `Redirect.NEVER`; the never-follow guarantee is tested for both
-  transport ownership modes.
-- `ClientConfig.toString()` omits the API key and redacts credential-bearing default headers.
-
-### Fixed (Phase 1 review)
-- Build launches on JDK 21 again (a JDK-25-only JVM flag was removed).
-- `Content` normalises nested `POJONode`/`BinaryNode` values on entry, closing a hole in the
-  deep-immutability contract.
-- Response parsing rejects out-of-range `long` counters and non-finite doubles, trailing content
-  after the JSON document, and an empty `answers` object (schema `minProperties: 1`).
-- `RequestOptions.deadline` has three states: inherit, disabled (`ZERO` / `noDeadline()`), set.
-- Javadoc validation is bound to `verify` (policy `all,-missing`, warnings fatal); the Maven
-  pre-commit hook is unconditional and JSON syntax is checked.
+[Unreleased]: https://github.com/Ultonian/jevjavauosdk/commits/main/

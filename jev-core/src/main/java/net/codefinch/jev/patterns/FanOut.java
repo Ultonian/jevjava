@@ -29,6 +29,7 @@ import net.codefinch.jev.model.SystemOneResponse;
  * back. Combine with a shared {@code state} that carries whatever the items are judged against.
  *
  * @param <T> the item type
+ * @since 0.1.0
  */
 public final class FanOut<T> {
   private final List<T> items;

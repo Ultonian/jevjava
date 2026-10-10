@@ -128,7 +128,7 @@ class ExamplesTest {
     assertThat(instructions.get("task").textValue()).isEqualTo(Rerank.TASK);
   }
 
-  /** R3 finding 4: CONFIRM never produces an automatic outcome, at both gate boundaries. */
+  /** CONFIRM never produces an automatic outcome, at both gate boundaries. */
   @Test
   void entityAlignmentRespectsTheConfirmBand() {
     double[][] cases = {{0.49, 0}, {0.5, 1}, {0.699, 1}, {0.7, 2}};

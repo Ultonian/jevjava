@@ -74,7 +74,7 @@ class ContentTest {
     assertThat(Json.write(content.toJson())).isEqualTo("[\"a\"]");
   }
 
-  /** Review P2: a nested POJONode kept a live reference to the caller's list. */
+  /** A nested POJONode must snapshot the caller's list. */
   @Test
   void nestedPojoNodeIsSnapshottedNotReferenced() {
     List<String> values = new ArrayList<>(List.of("before"));
@@ -88,7 +88,7 @@ class ContentTest {
     assertThat(pojoOrBinary(content.toJson())).isFalse();
   }
 
-  /** Review P2: a nested BinaryNode shared the caller's byte array. */
+  /** A nested BinaryNode must copy the caller's byte array. */
   @Test
   void nestedBinaryNodeBecomesDetachedBase64Text() {
     byte[] bytes = {1, 2, 3};

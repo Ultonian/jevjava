@@ -155,6 +155,8 @@ class CallObserverTest {
   }
 
   @Test
+  // This lifecycle scenario observes completion through latches or the original future.
+  @SuppressWarnings("FutureReturnValueIgnored")
   void deadlineAndCancellationOutcomesForQueuedAsyncCalls() throws Exception {
     ExecutorService single = Executors.newSingleThreadExecutor();
     CountDownLatch block = new CountDownLatch(1);
@@ -230,7 +232,7 @@ class CallObserverTest {
     assertThat(recording.calls).hasSize(1);
   }
 
-  // ---- Phase 3 review P1: observers are isolated from lifecycle threads ---------------------
+  // observers are isolated from lifecycle threads
 
   private void awaitEvents(int calls) {
     long end = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);

@@ -12,6 +12,7 @@ import java.util.Optional;
  * @param state the shared input every question is evaluated against
  * @param questions the named questions
  * @param model a model name or alias overriding the client default, or empty
+ * @since 0.1.0
  */
 public record SystemOneRequest(State state, Questions questions, Optional<String> model) {
 

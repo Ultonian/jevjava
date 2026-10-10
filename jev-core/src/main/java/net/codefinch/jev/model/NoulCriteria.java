@@ -9,6 +9,7 @@ import java.util.Optional;
  *
  * @param trueDescription description of a yes; empty omits the key, {@link Content#NULL} sends null
  * @param falseDescription description of a no; empty omits the key, {@link Content#NULL} sends null
+ * @since 0.1.0
  */
 public record NoulCriteria(Optional<Content> trueDescription, Optional<Content> falseDescription) {
 
